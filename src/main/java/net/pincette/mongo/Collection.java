@@ -23,6 +23,7 @@ import com.mongodb.reactivestreams.client.MongoCollection;
 import com.mongodb.reactivestreams.client.Success;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
@@ -196,6 +197,15 @@ public class Collection {
       final Class<T> resultClass,
       final UnaryOperator<FindPublisher<T>> setParameters) {
     return execList(collection, c -> findPub(c.find(filter, resultClass), setParameters));
+  }
+
+  public static <T, D> CompletionStage<Optional<T>> findOne(
+      final MongoCollection<D> collection,
+      final Bson filter,
+      final Class<T> resultClass,
+      final UnaryOperator<FindPublisher<T>> setParameters) {
+    return find(collection, filter, resultClass, setParameters)
+        .thenApply(list -> Optional.of(list).filter(l -> l.size() == 1).map(l -> l.get(0)));
   }
 
   private static <T> FindPublisher<T> findPub(

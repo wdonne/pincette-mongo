@@ -7,7 +7,7 @@
   <groupId>net.pincette</groupId>
   <artifactId>pincette-mongo</artifactId>
   <packaging>jar</packaging>
-  <version>1.0</version>
+  <version>1.0.1</version>
   <name>pincette-mongo</name>
   <description>MongoDB Utilities</description>
   <url>https://github.com/wdonne/pincette-mongo</url>
@@ -72,7 +72,7 @@
     <dependency>
       <groupId>net.pincette</groupId>
       <artifactId>pincette-common</artifactId>
-      <version>1.5.7</version>
+      <version>1.6.1</version>
     </dependency>
   </dependencies>
 
