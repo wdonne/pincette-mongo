@@ -10,8 +10,8 @@ import static javax.json.Json.createValue;
 import static javax.json.JsonValue.FALSE;
 import static javax.json.JsonValue.NULL;
 import static javax.json.JsonValue.TRUE;
-import static net.pincette.util.Json.asNumber;
-import static net.pincette.util.Json.asString;
+import static net.pincette.json.JsonUtil.asNumber;
+import static net.pincette.json.JsonUtil.asString;
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 
 import java.util.Map;
