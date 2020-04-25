@@ -1,10 +1,18 @@
 package net.pincette.mongo;
 
+import static javax.json.Json.createArrayBuilder;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
+import javax.json.JsonArray;
+import javax.json.JsonArrayBuilder;
+import javax.json.JsonObject;
+import javax.json.JsonValue;
 import net.pincette.rs.LambdaSubscriber;
 import org.reactivestreams.Publisher;
 
@@ -25,6 +33,16 @@ class Util {
 
     return new LambdaSubscriber<>(
         result::add, () -> future.complete(result), future::completeExceptionally);
+  }
+
+  static Optional<String> key(final JsonObject expression) {
+    return Optional.of(expression.keySet())
+        .filter(keys -> keys.size() == 1)
+        .map(keys -> keys.iterator().next());
+  }
+
+  static JsonArray toArray(final Stream<JsonValue> values) {
+    return values.reduce(createArrayBuilder(), JsonArrayBuilder::add, (b1, b2) -> b1).build();
   }
 
   static <T> CompletionStage<T> wrap(final Supplier<Publisher<T>> publisher) {

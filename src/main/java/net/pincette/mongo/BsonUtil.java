@@ -31,6 +31,7 @@ import org.bson.BsonInt32;
 import org.bson.BsonInt64;
 import org.bson.BsonNull;
 import org.bson.BsonNumber;
+import org.bson.BsonRegularExpression;
 import org.bson.BsonString;
 import org.bson.BsonTimestamp;
 import org.bson.BsonValue;
@@ -70,6 +71,8 @@ public class BsonUtil {
         return fromBson(bson.asInt64());
       case NULL:
         return NULL;
+      case REGULAR_EXPRESSION:
+        return fromBson(bson.asRegularExpression());
       case STRING:
         return fromBson(bson.asString());
       case TIMESTAMP:
@@ -109,6 +112,13 @@ public class BsonUtil {
 
   public static JsonString fromBson(final BsonDateTime bson) {
     return createValue(ofEpochMilli(bson.getValue()).toString());
+  }
+
+  public static JsonObject fromBson(final BsonRegularExpression bson) {
+    return createObjectBuilder()
+        .add("$regex", bson.getPattern())
+        .add("$options", bson.getOptions())
+        .build();
   }
 
   public static JsonString fromBson(final BsonString bson) {

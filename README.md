@@ -1,3 +1,3 @@
 # MongoDB Utilities
 
-Currently this package only contains functions to convert between BSON and JSON and some CompletionStage wrappers around collections.
+This package contains functions to convert between BSON and JSON and some CompletionStage wrappers around collections. It also implements the [MongoDB Query Operators](https://docs.mongodb.com/manual/reference/operator/query/) and the [MongoDB Aggregation Expression Operators](https://docs.mongodb.com/manual/reference/operator/aggregation/), but not the accumulators. See the [API documentation](https://www.javadoc.io/doc/net.pincette/pincette-mongo/latest/index.html) for the exceptions.

@@ -7,7 +7,7 @@
   <groupId>net.pincette</groupId>
   <artifactId>pincette-mongo</artifactId>
   <packaging>jar</packaging>
-  <version>1.1</version>
+  <version>1.2</version>
   <name>pincette-mongo</name>
   <description>MongoDB Utilities</description>
   <url>https://github.com/wdonne/pincette-mongo</url>
@@ -52,12 +52,12 @@
     <dependency>
       <groupId>org.mongodb</groupId>
       <artifactId>bson</artifactId>
-      <version>3.12.1</version>
+      <version>4.0.2</version>
     </dependency>
     <dependency>
       <groupId>org.mongodb</groupId>
       <artifactId>mongodb-driver-reactivestreams</artifactId>
-      <version>1.13.0</version>
+      <version>4.0.2</version>
     </dependency>
     <dependency>
       <groupId>javax.json</groupId>
@@ -67,17 +67,29 @@
     <dependency>
       <groupId>net.pincette</groupId>
       <artifactId>pincette-rs</artifactId>
-      <version>1.2</version>
+      <version>1.4</version>
     </dependency>
     <dependency>
       <groupId>net.pincette</groupId>
       <artifactId>pincette-common</artifactId>
-      <version>1.6.6</version>
+      <version>1.7</version>
     </dependency>
     <dependency>
       <groupId>net.pincette</groupId>
       <artifactId>pincette-json</artifactId>
-      <version>1.0</version>
+      <version>1.2</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>5.6.2</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.glassfish</groupId>
+      <artifactId>javax.json</artifactId>
+      <version>1.1.4</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 
@@ -121,16 +133,27 @@
         <version>3.1.1</version>
         <configuration>
           <additionalJOptions>
-            <additionalJOption>-J-Dhttp.agent=maven-javadoc-plugin-${project.name}</additionalJOption>
+            <additionalJOption>-J-Dhttp.agent=maven-javadoc-plugin-${project.name}
+            </additionalJOption>
           </additionalJOptions>
           <links>
             <link>http://docs.oracle.com/javase/8/docs/api/</link>
-            <link>https://www.javadoc.io/doc/net.pincette/pincette-common/1.6.6/</link>
+            <link>https://www.javadoc.io/doc/net.pincette/pincette-common/1.7/</link>
+            <link>https://www.javadoc.io/doc/net.pincette/pincette-rs/1.4/</link>
             <link>https://www.javadoc.io/doc/javax.json/javax.json-api/1.1.4/</link>
-            <link>https://www.javadoc.io/doc/org.mongodb/mongodb-driver-reactivestreams/1.13.0/</link>
-            <link>https://www.javadoc.io/doc/org.mongodb/bson/3.12.1/</link>
+            <link>https://www.javadoc.io/doc/org.mongodb/mongodb-driver-reactivestreams/4.0.2/
+            </link>
+            <link>https://www.javadoc.io/doc/org.mongodb/bson/4.0.2/</link>
           </links>
         </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.22.2</version>
+      </plugin>
+      <plugin>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>2.22.2</version>
       </plugin>
     </plugins>
   </build>

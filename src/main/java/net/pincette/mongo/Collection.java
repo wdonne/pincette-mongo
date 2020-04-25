@@ -17,6 +17,8 @@ import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.WriteModel;
 import com.mongodb.client.result.DeleteResult;
+import com.mongodb.client.result.InsertManyResult;
+import com.mongodb.client.result.InsertOneResult;
 import com.mongodb.client.result.UpdateResult;
 import com.mongodb.reactivestreams.client.AggregatePublisher;
 import com.mongodb.reactivestreams.client.ClientSession;
@@ -24,7 +26,6 @@ import com.mongodb.reactivestreams.client.DistinctPublisher;
 import com.mongodb.reactivestreams.client.FindPublisher;
 import com.mongodb.reactivestreams.client.MapReducePublisher;
 import com.mongodb.reactivestreams.client.MongoCollection;
-import com.mongodb.reactivestreams.client.Success;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletionStage;
@@ -43,18 +44,18 @@ import org.reactivestreams.Publisher;
 public class Collection {
   private Collection() {}
 
-  public static <D> CompletionStage<List<Document>> aggregate(
+  public static <D> CompletionStage<List<D>> aggregate(
       final MongoCollection<D> collection,
       List<? extends Bson> pipeline,
-      final UnaryOperator<AggregatePublisher<Document>> setParameters) {
+      final UnaryOperator<AggregatePublisher<D>> setParameters) {
     return execList(collection, c -> aggregatePub(c.aggregate(pipeline), setParameters));
   }
 
-  public static <D> CompletionStage<List<Document>> aggregate(
+  public static <D> CompletionStage<List<D>> aggregate(
       final MongoCollection<D> collection,
       final ClientSession session,
       List<? extends Bson> pipeline,
-      final UnaryOperator<AggregatePublisher<Document>> setParameters) {
+      final UnaryOperator<AggregatePublisher<D>> setParameters) {
     return execList(collection, c -> aggregatePub(c.aggregate(session, pipeline), setParameters));
   }
 
@@ -420,26 +421,26 @@ public class Collection {
     return exec(collection, c -> c.findOneAndUpdate(session, filter, update, options));
   }
 
-  public static <D> CompletionStage<Success> insertMany(
+  public static <D> CompletionStage<InsertManyResult> insertMany(
       final MongoCollection<D> collection, final List<? extends D> documents) {
     return exec(collection, c -> c.insertMany(documents));
   }
 
-  public static <D> CompletionStage<Success> insertMany(
+  public static <D> CompletionStage<InsertManyResult> insertMany(
       final MongoCollection<D> collection,
       final ClientSession session,
       final List<? extends D> documents) {
     return exec(collection, c -> c.insertMany(session, documents));
   }
 
-  public static <D> CompletionStage<Success> insertMany(
+  public static <D> CompletionStage<InsertManyResult> insertMany(
       final MongoCollection<D> collection,
       final List<? extends D> documents,
       final InsertManyOptions options) {
     return exec(collection, c -> c.insertMany(documents, options));
   }
 
-  public static <D> CompletionStage<Success> insertMany(
+  public static <D> CompletionStage<InsertManyResult> insertMany(
       final MongoCollection<D> collection,
       final ClientSession session,
       final List<? extends D> documents,
@@ -447,22 +448,22 @@ public class Collection {
     return exec(collection, c -> c.insertMany(session, documents, options));
   }
 
-  public static <D> CompletionStage<Success> insertOne(
+  public static <D> CompletionStage<InsertOneResult> insertOne(
       final MongoCollection<D> collection, final D document) {
     return exec(collection, c -> c.insertOne(document));
   }
 
-  public static <D> CompletionStage<Success> insertOne(
+  public static <D> CompletionStage<InsertOneResult> insertOne(
       final MongoCollection<D> collection, final ClientSession session, final D document) {
     return exec(collection, c -> c.insertOne(session, document));
   }
 
-  public static <D> CompletionStage<Success> insertOne(
+  public static <D> CompletionStage<InsertOneResult> insertOne(
       final MongoCollection<D> collection, final D document, final InsertOneOptions options) {
     return exec(collection, c -> c.insertOne(document, options));
   }
 
-  public static <D> CompletionStage<Success> insertOne(
+  public static <D> CompletionStage<InsertOneResult> insertOne(
       final MongoCollection<D> collection,
       final ClientSession session,
       final D document,
@@ -474,21 +475,21 @@ public class Collection {
     return Optional.of(list).filter(l -> l.size() == 1).map(l -> l.get(0));
   }
 
-  public static <D> CompletionStage<List<Document>> mapReduce(
+  public static <D> CompletionStage<List<D>> mapReduce(
       final MongoCollection<D> collection,
       final String mapFunction,
       final String reduceFunction,
-      final UnaryOperator<MapReducePublisher<Document>> setParameters) {
+      final UnaryOperator<MapReducePublisher<D>> setParameters) {
     return execList(
         collection, c -> mapReducePub(c.mapReduce(mapFunction, reduceFunction), setParameters));
   }
 
-  public static <D> CompletionStage<List<Document>> mapReduce(
+  public static <D> CompletionStage<List<D>> mapReduce(
       final MongoCollection<D> collection,
       final ClientSession session,
       final String mapFunction,
       final String reduceFunction,
-      final UnaryOperator<MapReducePublisher<Document>> setParameters) {
+      final UnaryOperator<MapReducePublisher<D>> setParameters) {
     return execList(
         collection,
         c -> mapReducePub(c.mapReduce(session, mapFunction, reduceFunction), setParameters));
