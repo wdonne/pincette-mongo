@@ -1,36 +1,53 @@
 package net.pincette.mongo;
 
 import static java.time.Instant.now;
+import static java.util.Collections.emptyMap;
+import static java.util.Optional.ofNullable;
+import static java.util.logging.Level.FINEST;
+import static java.util.logging.Logger.getLogger;
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
+import static javax.json.Json.createArrayBuilder;
 import static javax.json.Json.createObjectBuilder;
 import static javax.json.Json.createValue;
 import static javax.json.JsonValue.FALSE;
 import static javax.json.JsonValue.NULL;
+import static net.pincette.json.Jslt.transformer;
 import static net.pincette.json.JsonUtil.asInt;
 import static net.pincette.json.JsonUtil.asNumber;
 import static net.pincette.json.JsonUtil.asString;
 import static net.pincette.json.JsonUtil.copy;
 import static net.pincette.json.JsonUtil.getValue;
+import static net.pincette.json.JsonUtil.isArray;
 import static net.pincette.json.JsonUtil.isNumber;
 import static net.pincette.json.JsonUtil.isObject;
+import static net.pincette.json.JsonUtil.string;
 import static net.pincette.json.JsonUtil.toJsonPointer;
 import static net.pincette.mongo.BsonUtil.fromBson;
 import static net.pincette.mongo.BsonUtil.toBsonDocument;
 import static net.pincette.mongo.Relational.asFunction;
 import static net.pincette.mongo.Util.key;
+import static net.pincette.mongo.Util.toArray;
 import static net.pincette.util.Collections.map;
 import static net.pincette.util.Collections.merge;
 import static net.pincette.util.Pair.pair;
 
+import java.io.File;
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
+import java.util.logging.Logger;
 import javax.json.JsonArray;
 import javax.json.JsonNumber;
 import javax.json.JsonObject;
@@ -39,17 +56,24 @@ import javax.json.JsonStructure;
 import javax.json.JsonValue;
 import net.pincette.json.JsonUtil;
 import net.pincette.util.Or;
+import net.pincette.util.Pair;
 import org.bson.conversions.Bson;
 
 /**
  * This class lets you apply a <a
  * href="https://docs.mongodb.com/manual/meta/aggregation-quick-reference/#expressions">MongoDB
  * expression</a> to a JSON object. The only supported variable is <code>$$NOW</code>. The following
- * operators are not supported: <code>$filter</code>, <code>$map</code>, <code>$reduce</code>,
- * <code>$indexOfBytes</code>, <code>$strLenBytes</code>, <code>$substrBytes</code>, <code>$toDate
- * </code>, <code>$toObjectId</code> and the date expression operators. Accumulators and variable
- * expression operators are also not supported. Only the aggregation variable <code>$$NOW</code> is
- * supported.
+ * operators are not supported: <code>$indexOfBytes</code>, <code>$strLenBytes</code>, <code>
+ * $substrBytes</code>, <code>$toDate</code>, <code>$toObjectId</code> and the date expression
+ * operators. Accumulators are also not supported. Only the aggregation variable <code>
+ * $$NOW</code> is supported.
+ *
+ * <p>There are two extensions. The <code>$unescape</code> operator converts key names that start
+ * with "#$" to "$". This way an expression can be escaped from implementation generation. The other
+ * extension is <code>$jslt</code>. Its expression should be an object with the mandatory fields
+ * <code>input</code> and <code>script</code>. The former is an expression that should produce a
+ * JSON object. The latter is a reference to a JSLT script. If the value starts with "resource:"
+ * then it is treated as a resource in the class path. Otherwise it is a filename.
  *
  * @author Werner Donn\u00e9
  * @since 1.2
@@ -80,14 +104,19 @@ public class Expression {
   private static final String DIVIDE = "$divide";
   private static final String EQ = "$eq";
   private static final String EXP = "$exp";
+  private static final String FILTER = "$filter";
   private static final String FLOOR = "$floor";
   private static final String GT = "$gt";
   private static final String GTE = "$gte";
   private static final String IF_NULL = "$ifNull";
   private static final String IN = "$in";
+  private static final String IN_FIELD = "in";
   private static final String INDEX_OF_ARRAY = "$indexOfArray";
   private static final String INDEX_OF_CP = "$indexOfCP";
+  private static final String INPUT = "input";
   private static final String IS_ARRAY = "$isArray";
+  private static final String JSLT = "$jslt";
+  private static final String LET = "$let";
   private static final String LITERAL = "$literal";
   private static final String LN = "$ln";
   private static final String LOG = "$log";
@@ -95,6 +124,7 @@ public class Expression {
   private static final String LT = "$lt";
   private static final String LTE = "$lte";
   private static final String LTRIM = "$ltrim";
+  private static final String MAP = "$map";
   private static final String MERGE_OBJECTS = "$mergeObjects";
   private static final String MOD = "$mod";
   private static final String MULTIPLY = "$multiply";
@@ -106,12 +136,15 @@ public class Expression {
   private static final String POW = "$pow";
   private static final String RADIANS_TO_DEGREES = "$radiansToDegrees";
   private static final String RANGE = "$range";
+  private static final String REDUCE = "$reduce";
   private static final String REGEX_FIND = "$regexFind";
   private static final String REGEX_FIND_ALL = "$regexFindAll";
   private static final String REGEX_MATCH = "$regexMatch";
+  private static final String RESOURCE = "resource:";
   private static final String REVERSE_ARRAY = "$reverseArray";
   private static final String ROUND = "$round";
   private static final String RTRIM = "$rtrim";
+  private static final String SCRIPT = "script";
   private static final String SET_DIFFERENCE = "$setDifference";
   private static final String SET_EQUALS = "$setEquals";
   private static final String SET_INTERSECTION = "$setIntersection";
@@ -139,57 +172,59 @@ public class Expression {
   private static final String TRIM = "$trim";
   private static final String TRUNC = "$trunc";
   private static final String TYPE = "$type";
+  private static final String UNESCAPE = "$unescape";
+  private static final String VARS = "vars";
   private static final String ZIP = "$zip";
-  private static final Map<String, Function<JsonValue, Function<JsonObject, JsonValue>>>
-      ARITHMETIC =
-          map(
-              pair(ABS, Arithmetic::abs),
-              pair(ADD, Arithmetic::add),
-              pair(CEIL, Arithmetic::ceil),
-              pair(DIVIDE, Arithmetic::divide),
-              pair(EXP, Arithmetic::exp),
-              pair(FLOOR, Arithmetic::floor),
-              pair(LN, Arithmetic::ln),
-              pair(LOG, Arithmetic::log),
-              pair(LOG_10, Arithmetic::log10),
-              pair(MOD, Arithmetic::mod),
-              pair(MULTIPLY, Arithmetic::multiply),
-              pair(POW, Arithmetic::pow),
-              pair(ROUND, Arithmetic::round),
-              pair(SQRT, Arithmetic::sqrt),
-              pair(SUBTRACT, Arithmetic::subtract),
-              pair(TRUNC, Arithmetic::trunc));
-  private static final Map<String, Function<JsonValue, Function<JsonObject, JsonValue>>> ARRAYS =
+  private static final Map<String, Operator> ARITHMETIC =
+      map(
+          pair(ABS, Arithmetic::abs),
+          pair(ADD, Arithmetic::add),
+          pair(CEIL, Arithmetic::ceil),
+          pair(DIVIDE, Arithmetic::divide),
+          pair(EXP, Arithmetic::exp),
+          pair(FLOOR, Arithmetic::floor),
+          pair(LN, Arithmetic::ln),
+          pair(LOG, Arithmetic::log),
+          pair(LOG_10, Arithmetic::log10),
+          pair(MOD, Arithmetic::mod),
+          pair(MULTIPLY, Arithmetic::multiply),
+          pair(POW, Arithmetic::pow),
+          pair(ROUND, Arithmetic::round),
+          pair(SQRT, Arithmetic::sqrt),
+          pair(SUBTRACT, Arithmetic::subtract),
+          pair(TRUNC, Arithmetic::trunc));
+  private static final Map<String, Operator> ARRAYS =
       map(
           pair(ARRAY_ELEM_AT, Arrays::arrayElemAt),
           pair(ARRAY_TO_OBJECT, Arrays::arrayToObject),
           pair(CONCAT_ARRAYS, Arrays::concatArrays),
+          pair(FILTER, Arrays::filter),
           pair(IN, Arrays::in),
           pair(INDEX_OF_ARRAY, Arrays::indexOfArray),
           pair(IS_ARRAY, Arrays::isArray),
+          pair(MAP, Arrays::mapOp),
           pair(OBJECT_TO_ARRAY, Arrays::objectToArray),
           pair(RANGE, Arrays::range),
+          pair(REDUCE, Arrays::reduce),
           pair(REVERSE_ARRAY, Arrays::reverseArray),
           pair(SIZE, Arrays::size),
           pair(SLICE, Arrays::slice));
-  private static final Map<String, Function<JsonValue, Function<JsonObject, JsonValue>>> BOOLEANS =
+  private static final Map<String, Operator> BOOLEANS =
       map(pair(AND, Booleans::and), pair(NOT, Booleans::not), pair(OR, Booleans::or));
-  private static final Map<String, Function<JsonValue, Function<JsonObject, JsonValue>>>
-      CONDITIONAL =
-          map(
-              pair(COND, Conditional::cond),
-              pair(IF_NULL, Conditional::ifNull),
-              pair(SWITCH, Conditional::switchFunction));
-  private static final Map<String, Function<JsonValue, Function<JsonObject, JsonValue>>>
-      RELATIONAL =
-          map(
-              pair(EQ, asFunction(Relational::eq)),
-              pair(GT, asFunction(Relational::gt)),
-              pair(GTE, asFunction(Relational::gte)),
-              pair(LT, asFunction(Relational::lt)),
-              pair(LTE, asFunction(Relational::lte)),
-              pair(NE, asFunction(Relational::ne)));
-  private static final Map<String, Function<JsonValue, Function<JsonObject, JsonValue>>> SETS =
+  private static final Map<String, Operator> CONDITIONAL =
+      map(
+          pair(COND, Conditional::cond),
+          pair(IF_NULL, Conditional::ifNull),
+          pair(SWITCH, Conditional::switchFunction));
+  private static final Map<String, Operator> RELATIONAL =
+      map(
+          pair(EQ, asFunction(Relational::eq)),
+          pair(GT, asFunction(Relational::gt)),
+          pair(GTE, asFunction(Relational::gte)),
+          pair(LT, asFunction(Relational::lt)),
+          pair(LTE, asFunction(Relational::lte)),
+          pair(NE, asFunction(Relational::ne)));
+  private static final Map<String, Operator> SETS =
       map(
           pair(ALL_ELEMENTS_TRUE, Sets::allElementsTrue),
           pair(ANY_ELEMENTS_TRUE, Sets::anyElementsTrue),
@@ -198,7 +233,7 @@ public class Expression {
           pair(SET_INTERSECTION, Sets::setIntersection),
           pair(SET_IS_SUBSET, Sets::setIsSubset),
           pair(SET_UNION, Sets::setUnion));
-  private static final Map<String, Function<JsonValue, Function<JsonObject, JsonValue>>> STRINGS =
+  private static final Map<String, Operator> STRINGS =
       map(
           pair(CONCAT, Strings::concat),
           pair(INDEX_OF_CP, Strings::indexOfCP),
@@ -214,22 +249,21 @@ public class Expression {
           pair(TO_LOWER, Strings::toLower),
           pair(TO_UPPER, Strings::toUpper),
           pair(TRIM, Strings::trim));
-  private static final Map<String, Function<JsonValue, Function<JsonObject, JsonValue>>>
-      TRIGONOMETRY =
-          map(
-              pair(ACOS, Trigonometry::acos),
-              pair(ACOSH, Trigonometry::acosh),
-              pair(ASIN, Trigonometry::asin),
-              pair(ASINH, Trigonometry::asinh),
-              pair(ATAN, Trigonometry::atan),
-              pair(ATANH, Trigonometry::atanh),
-              pair(ATAN2, Trigonometry::atan2),
-              pair(COS, Trigonometry::cos),
-              pair(DEGREES_TO_RADIANS, Trigonometry::degreesToRadians),
-              pair(RADIANS_TO_DEGREES, Trigonometry::radiansToDegrees),
-              pair(SIN, Trigonometry::sin),
-              pair(TAN, Trigonometry::tan));
-  private static final Map<String, Function<JsonValue, Function<JsonObject, JsonValue>>> TYPES =
+  private static final Map<String, Operator> TRIGONOMETRY =
+      map(
+          pair(ACOS, Trigonometry::acos),
+          pair(ACOSH, Trigonometry::acosh),
+          pair(ASIN, Trigonometry::asin),
+          pair(ASINH, Trigonometry::asinh),
+          pair(ATAN, Trigonometry::atan),
+          pair(ATANH, Trigonometry::atanh),
+          pair(ATAN2, Trigonometry::atan2),
+          pair(COS, Trigonometry::cos),
+          pair(DEGREES_TO_RADIANS, Trigonometry::degreesToRadians),
+          pair(RADIANS_TO_DEGREES, Trigonometry::radiansToDegrees),
+          pair(SIN, Trigonometry::sin),
+          pair(TAN, Trigonometry::tan));
+  private static final Map<String, Operator> TYPES =
       map(
           pair(CONVERT, Types::convert),
           pair(TO_BOOL, Types::toBool),
@@ -239,7 +273,7 @@ public class Expression {
           pair(TO_LONG, Types::toLong),
           pair(TO_STRING, Types::toString),
           pair(TYPE, Types::type));
-  private static final Map<String, Function<JsonValue, Function<JsonObject, JsonValue>>> FUNCTIONS =
+  private static final Map<String, Operator> OPERATORS =
       merge(
           ARITHMETIC,
           ARRAYS,
@@ -252,37 +286,62 @@ public class Expression {
           TYPES,
           map(
               pair(CMP, Cmp::cmp),
+              pair(JSLT, Expression::jslt),
+              pair(LET, Expression::let),
               pair(LITERAL, Expression::literal),
               pair(MERGE_OBJECTS, Expression::mergeObjects),
+              pair(UNESCAPE, Expression::unescape),
               pair(ZIP, Zip::zip)));
+  private static final Logger logger = getLogger("net.pincette.mongo.expressions");
+  private static Map<String, Operator> ops = OPERATORS;
 
   private Expression() {}
 
-  static Optional<List<JsonValue>> applyFunctions(
-      final List<Function<JsonObject, JsonValue>> functions, final JsonObject json) {
-    return applyFunctions(functions, json, fncs -> true);
-  }
-
-  static Optional<List<JsonValue>> applyFunctions(
-      final List<Function<JsonObject, JsonValue>> functions,
+  static Optional<List<JsonValue>> applyImplementations(
+      final List<Implementation> implementations,
       final JsonObject json,
-      final Predicate<List<Function<JsonObject, JsonValue>>> condition) {
-    return Optional.ofNullable(functions)
+      final Map<String, JsonValue> variables) {
+    return applyImplementations(implementations, json, variables, fncs -> true);
+  }
+
+  static Optional<List<JsonValue>> applyImplementations(
+      final List<Implementation> implementations,
+      final JsonObject json,
+      final Map<String, JsonValue> variables,
+      final Predicate<List<Implementation>> condition) {
+    return ofNullable(implementations)
         .filter(condition)
-        .map(fncs -> fncs.stream().map(f -> f == null ? null : f.apply(json)).collect(toList()));
+        .map(
+            fncs ->
+                fncs.stream()
+                    .map(f -> f == null ? null : f.apply(json, variables))
+                    .collect(toList()));
   }
 
-  static Optional<List<JsonValue>> applyFunctionsNum(
-      final List<Function<JsonObject, JsonValue>> functions, final JsonObject json, final int num) {
-    return applyFunctions(functions, json, fncs -> fncs.size() == num);
+  static Optional<List<JsonValue>> applyImplementationsNum(
+      final List<Implementation> functions,
+      final JsonObject json,
+      final Map<String, JsonValue> variables,
+      final int num) {
+    return applyImplementations(functions, json, variables, fncs -> fncs.size() == num);
   }
 
-  static Function<JsonObject, JsonValue> arraysOperator(
+  private static Map<String, JsonValue> applyVariables(
+      final JsonObject json,
+      final Map<String, JsonValue> variables,
+      final Map<String, Implementation> implementations) {
+    return merge(
+        variables,
+        implementations.entrySet().stream()
+            .collect(toMap(Entry::getKey, e -> e.getValue().apply(json, variables))));
+  }
+
+  static Implementation arraysOperator(
       final JsonValue value, final Function<List<JsonArray>, JsonValue> op) {
     return multipleOperator(value, op, JsonUtil::isArray, JsonValue::asJsonArray);
   }
 
-  static Function<JsonObject, JsonValue> arraysOperatorTwo(
+  static Implementation arraysOperatorTwo(
       final JsonValue value, final BiFunction<JsonArray, JsonArray, JsonValue> op) {
     return multipleOperator(
         value,
@@ -291,24 +350,13 @@ public class Expression {
         JsonValue::asJsonArray);
   }
 
-  static Function<JsonObject, JsonValue> bigMath(
-      final JsonValue value, final UnaryOperator<BigDecimal> op) {
+  static Implementation bigMath(final JsonValue value, final UnaryOperator<BigDecimal> op) {
     return math(value, JsonNumber::bigDecimalValue, op);
   }
 
-  static Function<JsonObject, JsonValue> bigMathTwo(
+  static Implementation bigMathTwo(
       final JsonValue value, final BinaryOperator<BigDecimal> op, final boolean optional) {
     return mathTwo(value, JsonNumber::bigDecimalValue, op, optional);
-  }
-
-  private static Function<JsonObject, JsonValue> function(final String key, final JsonValue value) {
-    return Optional.ofNullable(FUNCTIONS.get(key)).map(fn -> fn.apply(value)).orElse(json -> NULL);
-  }
-
-  private static Function<JsonObject, JsonValue> function(final JsonObject expression) {
-    return key(expression)
-        .map(key -> function(key, expression.getValue("/" + key)))
-        .orElse(json -> NULL);
   }
 
   /**
@@ -319,7 +367,23 @@ public class Expression {
    * @since 1.2
    */
   public static Function<JsonObject, JsonValue> function(final JsonValue expression) {
-    return isObject(expression) ? function(expression.asJsonObject()) : value(expression);
+    return function(expression, emptyMap());
+  }
+
+  /**
+   * Constructs a function with <code>expression</code>.
+   *
+   * @param expression the MongoDB expression.
+   * @param variables external variables.
+   * @return The function, which is stateless.
+   * @since 1.3
+   */
+  public static Function<JsonObject, JsonValue> function(
+      final JsonValue expression, final Map<String, JsonValue> variables) {
+    final Implementation implementation = implementation(expression);
+    final Map<String, JsonValue> vars = stripDollars(variables);
+
+    return json -> implementation.apply(json, vars);
   }
 
   /**
@@ -330,13 +394,20 @@ public class Expression {
    * @since 1.2
    */
   public static Function<JsonObject, JsonValue> function(final Bson expression) {
-    return function(fromBson(toBsonDocument(expression)));
+    return function(fromBson(toBsonDocument(expression)), emptyMap());
   }
 
-  static List<Function<JsonObject, JsonValue>> functions(final JsonValue value) {
-    return JsonUtil.isArray(value)
-        ? value.asJsonArray().stream().map(Expression::function).collect(toList())
-        : null;
+  /**
+   * Constructs a function with <code>expression</code>.
+   *
+   * @param expression the MongoDB expression.
+   * @param variables external variables.
+   * @return The function, which is stateless.
+   * @since 1.3
+   */
+  public static Function<JsonObject, JsonValue> function(
+      final Bson expression, final Map<String, JsonValue> variables) {
+    return function(fromBson(toBsonDocument(expression)), variables);
   }
 
   static int getInteger(final List<JsonValue> values, final int index) {
@@ -345,6 +416,48 @@ public class Expression {
 
   static String getString(final List<JsonValue> values, final int index) {
     return asString(values.get(index)).getString();
+  }
+
+  private static Optional<Implementation> implementation(final String key, final JsonValue value) {
+    return ofNullable(ops.get(key)).map(fn -> fn.apply(value));
+  }
+
+  /**
+   * Extension developers can use this to delegate implementation generation to subexpressions.
+   *
+   * @param expression the given expression.
+   * @return The generated implementation.
+   * @since 1.3
+   */
+  public static Implementation implementation(final JsonValue expression) {
+    final Supplier<Implementation> tryArray =
+        () -> isArray(expression) ? implementation(expression.asJsonArray()) : value(expression);
+
+    return wrapLogging(
+        isObject(expression) ? implementation(expression.asJsonObject()) : tryArray.get(),
+        expression);
+  }
+
+  private static Implementation implementation(final JsonObject expression) {
+    return key(expression)
+        .flatMap(key -> implementation(key, expression.getValue("/" + key)))
+        .orElseGet(() -> recursiveImplementation(expression));
+  }
+
+  private static Implementation implementation(final JsonArray expression) {
+    final List<Implementation> implementations =
+        expression.stream().map(Expression::implementation).collect(toList());
+
+    return (json, vars) ->
+        implementations.stream()
+            .reduce(createArrayBuilder(), (b, i) -> b.add(i.apply(json, vars)), (b1, b2) -> b1)
+            .build();
+  }
+
+  static List<Implementation> implementations(final JsonValue value) {
+    return isArray(value)
+        ? value.asJsonArray().stream().map(Expression::implementation).collect(toList())
+        : null;
   }
 
   static boolean isFalse(final JsonValue value) {
@@ -357,39 +470,106 @@ public class Expression {
     return !(value instanceof JsonStructure);
   }
 
-  private static Function<JsonObject, JsonValue> literal(final JsonValue value) {
-    return json -> value;
+  private static Implementation jslt(final JsonValue value) {
+    final Implementation input = memberFunction(value, INPUT);
+    final UnaryOperator<JsonObject> script =
+        member(value, SCRIPT, v -> asString(v).getString())
+            .map(
+                s ->
+                    s.startsWith(RESOURCE)
+                        ? transformer(s.substring(RESOURCE.length()))
+                        : transformer(new File(s)))
+            .orElse(null);
+
+    return (json, vars) ->
+        input != null && script != null
+            ? Optional.of(input.apply(json, vars))
+                .filter(JsonUtil::isObject)
+                .map(JsonValue::asJsonObject)
+                .map(script)
+                .map(v -> (JsonValue) v)
+                .orElse(NULL)
+            : NULL;
+  }
+
+  private static Implementation let(final JsonValue value) {
+    final Implementation in = memberFunction(value, IN_FIELD);
+    final Map<String, Implementation> variables = variables(value);
+
+    return (json, vars) ->
+        ofNullable(in).map(i -> i.apply(json, applyVariables(json, vars, variables))).orElse(NULL);
+  }
+
+  private static Implementation literal(final JsonValue value) {
+    return (json, vars) -> value;
+  }
+
+  private static JsonValue log(
+      final JsonValue expression,
+      final JsonObject json,
+      final Map<String, JsonValue> variables,
+      final JsonValue result) {
+    logger.log(
+        FINEST,
+        () ->
+            "Expression:\n"
+                + string(expression)
+                + "\n\nWith:\n"
+                + string(json)
+                + "\n\nVariables:\n"
+                + variables(variables)
+                + "\n\nYields: "
+                + string(result));
+
+    return result;
+  }
+
+  /**
+   * If you set the log level to FINEST you will get a trace.
+   *
+   * @return The logger with the name "net.pincette.mongo.expression".
+   * @since 1.3
+   */
+  public static Logger logger() {
+    return logger;
   }
 
   @SuppressWarnings("java:S4276") // Not compatible.
-  static Function<JsonObject, JsonValue> math(
-      final JsonValue value, final UnaryOperator<Double> op) {
+  static Implementation math(final JsonValue value, final UnaryOperator<Double> op) {
     return math(value, JsonNumber::doubleValue, op);
   }
 
-  private static <T> Function<JsonObject, JsonValue> math(
+  private static <T> Implementation math(
       final JsonValue value, final Function<JsonNumber, T> toValue, final UnaryOperator<T> op) {
-    final Function<JsonObject, JsonValue> function = function(value);
+    final Implementation implementation = implementation(value);
 
-    return json ->
-        numeric(function, json).map(toValue).map(op).map(JsonUtil::createValue).orElse(NULL);
+    return (json, vars) ->
+        numeric(implementation, json, vars)
+            .map(toValue)
+            .map(op)
+            .map(JsonUtil::createValue)
+            .orElse(NULL);
   }
 
   @SuppressWarnings("java:S4276") // Not compatible.
-  static Function<JsonObject, JsonValue> mathTwo(
+  static Implementation mathTwo(
       final JsonValue value, final BinaryOperator<Double> op, final boolean optional) {
     return mathTwo(value, JsonNumber::doubleValue, op, optional);
   }
 
-  private static <T> Function<JsonObject, JsonValue> mathTwo(
+  private static <T> Implementation mathTwo(
       final JsonValue value,
       final Function<JsonNumber, T> toValue,
       final BinaryOperator<T> op,
       final boolean optional) {
-    final List<Function<JsonObject, JsonValue>> functions = functions(value);
+    final List<Implementation> implementations = implementations(value);
 
-    return json ->
-        applyFunctions(functions, json, fncs -> (fncs.size() == 1 && optional) || fncs.size() == 2)
+    return (json, vars) ->
+        applyImplementations(
+                implementations,
+                json,
+                vars,
+                fncs -> (fncs.size() == 1 && optional) || fncs.size() == 2)
             .filter(values -> values.stream().allMatch(JsonUtil::isNumber))
             .map(
                 values ->
@@ -409,20 +589,41 @@ public class Expression {
         .map(extract);
   }
 
-  static Function<JsonObject, JsonValue> memberFunction(final JsonValue value, final String name) {
-    return member(value, name, Expression::function).orElse(null);
+  /**
+   * If <code>expression</code> is an object, which has a subexpression called <code>name</code>,
+   * then this method returns the implementation of the subexpression.
+   *
+   * @param expression the given expression.
+   * @param name the name of the subexpression.
+   * @return The implementation of the subexpression. If <code>expression</code> is not an object or
+   *     if the subexpression is invalid <code>null</code> will be returned.
+   * @since 1.3
+   */
+  public static Implementation memberFunction(final JsonValue expression, final String name) {
+    return member(expression, name, Expression::implementation).orElse(null);
   }
 
-  static List<Function<JsonObject, JsonValue>> memberFunctions(
-      final JsonValue value, final String name) {
-    return member(value, name, Expression::functions).orElse(null);
+  /**
+   * If <code>expression</code> is an object, which has a subexpression called <code>name</code>,
+   * and if the subexpression is actually an array of subexpressions, then this method returns the
+   * implementation of the subexpressions.
+   *
+   * @param expression the given expression.
+   * @param name the name of the subexpressions.
+   * @return The implementation of the subexpressions. If <code>expression</code> is not an object
+   *     or if the subexpressions are invalid <code>null</code> will be returned.
+   * @since 1.3
+   */
+  public static List<Implementation> memberFunctions(
+      final JsonValue expression, final String name) {
+    return member(expression, name, Expression::implementations).orElse(null);
   }
 
-  private static Function<JsonObject, JsonValue> mergeObjects(final JsonValue value) {
-    final List<Function<JsonObject, JsonValue>> functions = functions(value);
+  private static Implementation mergeObjects(final JsonValue value) {
+    final List<Implementation> implementations = implementations(value);
 
-    return json ->
-        applyFunctions(functions, json)
+    return (json, vars) ->
+        applyImplementations(implementations, json, vars)
             .filter(values -> values.stream().allMatch(JsonUtil::isObject))
             .map(Expression::mergeObjects)
             .orElse(NULL);
@@ -438,36 +639,120 @@ public class Expression {
         .build();
   }
 
-  private static <T> Function<JsonObject, JsonValue> multipleOperator(
+  private static <T> Implementation multipleOperator(
       final JsonValue value,
       final Function<List<T>, JsonValue> op,
       final Predicate<JsonValue> predicate,
       final Function<JsonValue, T> map) {
-    final List<Function<JsonObject, JsonValue>> functions = functions(value);
+    final List<Implementation> implementations = implementations(value);
 
-    return json ->
-        applyFunctions(functions, json)
+    return (json, vars) ->
+        applyImplementations(implementations, json, vars)
             .map(values -> values.stream().filter(predicate).map(map).collect(toList()))
-            .filter(list -> list.size() == functions.size())
+            .filter(list -> list.size() == implementations.size())
             .map(op)
             .orElse(NULL);
   }
 
   private static Optional<JsonNumber> numeric(
-      final Function<JsonObject, JsonValue> function, final JsonObject json) {
-    return Optional.ofNullable(function)
-        .map(f -> f.apply(json))
+      final Implementation implementation,
+      final JsonObject json,
+      final Map<String, JsonValue> variables) {
+    return ofNullable(implementation)
+        .map(f -> f.apply(json, variables))
         .filter(JsonUtil::isNumber)
         .map(JsonUtil::asNumber);
   }
 
-  static Function<JsonObject, JsonValue> stringsOperator(
+  private static Implementation recursiveImplementation(final JsonObject expression) {
+    final Map<String, Implementation> implementations =
+        expression.entrySet().stream()
+            .collect(toMap(Entry::getKey, e -> implementation(e.getValue())));
+
+    return (json, vars) ->
+        implementations.entrySet().stream()
+            .reduce(
+                createObjectBuilder(),
+                (b, e) -> b.add(e.getKey(), e.getValue().apply(json, vars)),
+                (b1, b2) -> b1)
+            .build();
+  }
+
+  /**
+   * Globally adds an additional operator to the known operators. This should be called only once
+   * for each extension. There shouldn't be an overlap of the operator names, but if it occurs the
+   * latest registration always wins.
+   *
+   * @param name the name of the operator.
+   * @param extension the extension.
+   * @since 1.3
+   */
+  public static void registerExtension(final String name, final Operator extension) {
+    ops.put(name, extension);
+  }
+
+  /**
+   * Globally adds additional operators to the known operators. This should be called only once for
+   * each set of extensions. There shouldn't be an overlap of the operator names, but if it occurs
+   * the latest registration always wins.
+   *
+   * @param extensions the extensions.
+   * @since 1.3
+   */
+  public static void registerExtensions(final Map<String, Operator> extensions) {
+    ops = merge(ops, extensions);
+  }
+
+  static Implementation stringsOperator(
       final JsonValue value, final Function<List<String>, JsonValue> op) {
     return multipleOperator(value, op, JsonUtil::isString, v -> asString(v).getString());
   }
 
-  private static Function<JsonObject, JsonValue> value(final JsonValue value) {
-    return json ->
+  private static Map<String, JsonValue> stripDollars(final Map<String, JsonValue> variables) {
+    return variables.entrySet().stream()
+        .collect(toMap(e -> stripDollars(e.getKey()), Entry::getValue));
+  }
+
+  private static String stripDollars(final String name) {
+    return name.startsWith("$$") ? name.substring(2) : name;
+  }
+
+  private static Implementation unescape(final JsonValue value) {
+    final Implementation implementation = implementation(value);
+
+    return (json, vars) -> unescapeKeys(implementation.apply(json, vars));
+  }
+
+  private static String unescapeKey(final String key) {
+    return key.startsWith("#$") ? key.substring(1) : key;
+  }
+
+  private static JsonValue unescapeKeys(final JsonValue value) {
+    switch (value.getValueType()) {
+      case ARRAY:
+        return unescapeKeys(value.asJsonArray());
+      case OBJECT:
+        return unescapeKeys(value.asJsonObject());
+      default:
+        return value;
+    }
+  }
+
+  private static JsonValue unescapeKeys(final JsonArray array) {
+    return toArray(array.stream().map(Expression::unescapeKeys));
+  }
+
+  private static JsonValue unescapeKeys(final JsonObject object) {
+    return object.entrySet().stream()
+        .reduce(
+            createObjectBuilder(),
+            (b, e) -> b.add(unescapeKey(e.getKey()), unescapeKeys(e.getValue())),
+            (b1, b2) -> b1)
+        .build();
+  }
+
+  private static Implementation value(final JsonValue value) {
+    return (json, variables) ->
         Optional.of(value)
             .filter(JsonUtil::isString)
             .map(JsonUtil::asString)
@@ -476,12 +761,66 @@ public class Expression {
                 s ->
                     Or.<JsonValue>tryWith(
                             () -> s.equals(NOW) ? createValue(now().toString()) : null)
+                        .or(() -> s.startsWith("$$") ? value(variables, s.substring(2)) : null)
                         .or(
                             () ->
                                 s.startsWith("$")
-                                    ? getValue(json, toJsonPointer(s.substring(1))).orElse(null)
+                                    ? getValue(json, toJsonPointer(s.substring(1))).orElse(NULL)
                                     : null)
                         .get())
             .orElse(value);
+  }
+
+  private static JsonValue value(final Map<String, JsonValue> variables, final String variable) {
+    final Pair<String, String> name = variableName(variable);
+
+    return value(variables.get(name.first), name);
+  }
+
+  static JsonValue value(final JsonValue value, final String variable) {
+    return value(value, variableName(variable));
+  }
+
+  private static JsonValue value(final JsonValue value, final Pair<String, String> variable) {
+    return ofNullable(value)
+        .filter(v -> variable.second == null || isObject(v))
+        .map(
+            v ->
+                variable.second != null
+                    ? getValue(v.asJsonObject(), toJsonPointer(variable.second)).orElse(NULL)
+                    : value)
+        .orElse(NULL);
+  }
+
+  private static Pair<String, String> variableName(final String variable) {
+    return Optional.of(variable.indexOf('.'))
+        .filter(i -> i != -1)
+        .map(i -> pair(variable.substring(0, i), variable.substring(i + 1)))
+        .orElseGet(() -> pair(variable, null));
+  }
+
+  private static Map<String, Implementation> variables(final JsonValue value) {
+    return Optional.of(value)
+        .filter(JsonUtil::isObject)
+        .map(JsonValue::asJsonObject)
+        .map(json -> json.getJsonObject(VARS))
+        .map(JsonObject::entrySet)
+        .map(Set::stream)
+        .map(stream -> stream.collect(toMap(Entry::getKey, e -> implementation(e.getValue()))))
+        .orElseGet(Collections::emptyMap);
+  }
+
+  private static String variables(final Map<String, JsonValue> variables) {
+    return variables.entrySet().stream()
+        .map(e -> e.getKey() + ": " + string(e.getValue()))
+        .collect(joining("\n"));
+  }
+
+  private static Implementation wrapLogging(
+      final Implementation implementation, final JsonValue expression) {
+    return (json, vars) ->
+        Optional.of(implementation.apply(json, vars))
+            .map(result -> log(expression, json, vars, result))
+            .orElse(null);
   }
 }

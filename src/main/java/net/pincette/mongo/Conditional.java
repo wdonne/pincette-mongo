@@ -3,10 +3,10 @@ package net.pincette.mongo;
 import static java.util.stream.Collectors.toList;
 import static javax.json.JsonValue.NULL;
 import static net.pincette.json.JsonUtil.isArray;
-import static net.pincette.mongo.Expression.applyFunctions;
-import static net.pincette.mongo.Expression.applyFunctionsNum;
-import static net.pincette.mongo.Expression.function;
-import static net.pincette.mongo.Expression.functions;
+import static net.pincette.mongo.Expression.applyImplementations;
+import static net.pincette.mongo.Expression.applyImplementationsNum;
+import static net.pincette.mongo.Expression.implementation;
+import static net.pincette.mongo.Expression.implementations;
 import static net.pincette.mongo.Expression.isFalse;
 import static net.pincette.mongo.Expression.member;
 import static net.pincette.mongo.Expression.memberFunction;
@@ -16,8 +16,6 @@ import static net.pincette.util.Pair.pair;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
-import javax.json.JsonObject;
 import javax.json.JsonValue;
 import net.pincette.json.JsonUtil;
 import net.pincette.util.Pair;
@@ -32,8 +30,7 @@ class Conditional {
 
   private Conditional() {}
 
-  private static List<Pair<Function<JsonObject, JsonValue>, Function<JsonObject, JsonValue>>>
-      branches(final JsonValue value) {
+  private static List<Pair<Implementation, Implementation>> branches(final JsonValue value) {
     return Optional.of(value)
         .filter(JsonUtil::isArray)
         .map(JsonValue::asJsonArray)
@@ -46,49 +43,50 @@ class Conditional {
                     .map(
                         json ->
                             pair(
-                                function(json.getValue("/" + CASE)),
-                                function(json.getValue("/" + THEN))))
+                                implementation(json.getValue("/" + CASE)),
+                                implementation(json.getValue("/" + THEN))))
                     .collect(toList()))
         .orElse(null);
   }
 
-  static Function<JsonObject, JsonValue> cond(final JsonValue value) {
-    final List<Function<JsonObject, JsonValue>> functions =
+  static Implementation cond(final JsonValue value) {
+    final List<Implementation> implementations =
         isArray(value)
-            ? functions(value)
+            ? implementations(value)
             : list(
                 memberFunction(value, IF),
                 memberFunction(value, THEN),
                 memberFunction(value, ELSE));
 
-    return json ->
-        applyFunctions(functions, json, fncs -> fncs.stream().allMatch(Objects::nonNull))
+    return (json, vars) ->
+        applyImplementations(
+                implementations, json, vars, fncs -> fncs.stream().allMatch(Objects::nonNull))
             .map(values -> values.get(isFalse(values.get(0)) ? 2 : 1))
             .orElse(NULL);
   }
 
-  static Function<JsonObject, JsonValue> ifNull(final JsonValue value) {
-    final List<Function<JsonObject, JsonValue>> functions = functions(value);
+  static Implementation ifNull(final JsonValue value) {
+    final List<Implementation> implementations = implementations(value);
 
-    return json ->
-        applyFunctionsNum(functions, json, 2)
+    return (json, vars) ->
+        applyImplementationsNum(implementations, json, vars, 2)
             .map(values -> values.get(values.get(0).equals(NULL) ? 1 : 0))
             .orElse(NULL);
   }
 
-  static Function<JsonObject, JsonValue> switchFunction(final JsonValue value) {
-    final List<Pair<Function<JsonObject, JsonValue>, Function<JsonObject, JsonValue>>> branches =
+  static Implementation switchFunction(final JsonValue value) {
+    final List<Pair<Implementation, Implementation>> branches =
         member(value, BRANCHES, Conditional::branches).orElse(null);
-    final Function<JsonObject, JsonValue> defaultFunction = memberFunction(value, DEFAULT);
+    final Implementation defaultFunction = memberFunction(value, DEFAULT);
 
-    return json ->
+    return (json, vars) ->
         branches != null && defaultFunction != null
             ? branches.stream()
-                .map(pair -> pair(pair.first.apply(json), pair.second))
+                .map(pair -> pair(pair.first.apply(json, vars), pair.second))
                 .filter(pair -> !isFalse(pair.first))
-                .map(pair -> pair.second.apply(json))
+                .map(pair -> pair.second.apply(json, vars))
                 .findFirst()
-                .orElseGet(() -> defaultFunction.apply(json))
+                .orElseGet(() -> defaultFunction.apply(json, vars))
             : NULL;
   }
 }

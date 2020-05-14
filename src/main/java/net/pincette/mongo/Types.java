@@ -1,23 +1,25 @@
 package net.pincette.mongo;
 
 import static java.math.BigDecimal.ZERO;
+import static java.util.Optional.ofNullable;
 import static javax.json.Json.createObjectBuilder;
 import static javax.json.Json.createValue;
 import static javax.json.JsonValue.FALSE;
 import static javax.json.JsonValue.NULL;
 import static javax.json.JsonValue.TRUE;
-import static net.pincette.json.JsonUtil.asDouble;
+import static net.pincette.json.JsonUtil.asInstant;
 import static net.pincette.json.JsonUtil.asInt;
 import static net.pincette.json.JsonUtil.asLong;
 import static net.pincette.json.JsonUtil.asNumber;
 import static net.pincette.json.JsonUtil.asString;
 import static net.pincette.json.JsonUtil.isDouble;
+import static net.pincette.json.JsonUtil.isInstant;
 import static net.pincette.json.JsonUtil.isInt;
 import static net.pincette.json.JsonUtil.isLong;
 import static net.pincette.json.JsonUtil.isNumber;
 import static net.pincette.json.JsonUtil.isString;
-import static net.pincette.mongo.Expression.applyFunctions;
-import static net.pincette.mongo.Expression.function;
+import static net.pincette.mongo.Expression.applyImplementations;
+import static net.pincette.mongo.Expression.implementation;
 import static net.pincette.mongo.Expression.isScalar;
 import static net.pincette.mongo.Expression.memberFunction;
 import static net.pincette.util.Collections.list;
@@ -26,11 +28,9 @@ import static net.pincette.util.Util.tryToGetSilent;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import javax.json.JsonNumber;
-import javax.json.JsonObject;
 import javax.json.JsonValue;
 import net.pincette.json.JsonUtil;
 
@@ -52,16 +52,17 @@ class Types {
 
   private Types() {}
 
-  static Function<JsonObject, JsonValue> convert(final JsonValue value) {
-    final List<Function<JsonObject, JsonValue>> functions =
+  static Implementation convert(final JsonValue value) {
+    final List<Implementation> implementations =
         list(
             memberFunction(value, INPUT),
             memberFunction(value, TO),
-            Optional.ofNullable(memberFunction(value, ON_ERROR)).orElse(json -> NULL),
-            Optional.ofNullable(memberFunction(value, ON_NULL)).orElse(json -> NULL));
+            ofNullable(memberFunction(value, ON_ERROR)).orElse((json, vars) -> NULL),
+            ofNullable(memberFunction(value, ON_NULL)).orElse((json, vars) -> NULL));
 
-    return json ->
-        applyFunctions(functions, json, fncs -> fncs.get(0) != null && fncs.get(1) != null)
+    return (json, vars) ->
+        applyImplementations(
+                implementations, json, vars, fncs -> fncs.get(0) != null && fncs.get(1) != null)
             .filter(
                 values ->
                     isScalar(values.get(0))
@@ -95,7 +96,9 @@ class Types {
       case NUMBER:
         return createValue(asNumber(value).bigDecimalValue());
       case STRING:
-        return createValue(new BigDecimal(asString(value).getString()));
+        return isInstant(value)
+            ? createValue(new BigDecimal(asInstant(value).toEpochMilli()))
+            : createValue(new BigDecimal(asString(value).getString()));
       case TRUE:
         return createValue(1);
       default:
@@ -150,24 +153,23 @@ class Types {
     }
   }
 
-  static Function<JsonObject, JsonValue> toBool(final JsonValue value) {
+  static Implementation toBool(final JsonValue value) {
     return toConvert(value, BOOL);
   }
 
-  private static Function<JsonObject, JsonValue> toConvert(
-      final JsonValue value, final String type) {
+  private static Implementation toConvert(final JsonValue value, final String type) {
     return convert(createObjectBuilder().add(INPUT, value).add(TO, type).build());
   }
 
-  static Function<JsonObject, JsonValue> toDecimal(final JsonValue value) {
+  static Implementation toDecimal(final JsonValue value) {
     return toConvert(value, DECIMAL);
   }
 
-  static Function<JsonObject, JsonValue> toDouble(final JsonValue value) {
+  static Implementation toDouble(final JsonValue value) {
     return toConvert(value, DOUBLE);
   }
 
-  static Function<JsonObject, JsonValue> toInt(final JsonValue value) {
+  static Implementation toInt(final JsonValue value) {
     return toConvert(value, INT);
   }
 
@@ -178,11 +180,11 @@ class Types {
     return isInt(value) ? INT : tryLong.get();
   }
 
-  static Function<JsonObject, JsonValue> toLong(final JsonValue value) {
+  static Implementation toLong(final JsonValue value) {
     return toConvert(value, LONG);
   }
 
-  static Function<JsonObject, JsonValue> toString(final JsonValue value) {
+  static Implementation toString(final JsonValue value) {
     return toConvert(value, STRING_TYPE);
   }
 
@@ -204,11 +206,11 @@ class Types {
     }
   }
 
-  static Function<JsonObject, JsonValue> type(final JsonValue value) {
-    final Function<JsonObject, JsonValue> function = function(value);
+  static Implementation type(final JsonValue value) {
+    final Implementation implementation = implementation(value);
 
-    return json ->
-        Optional.of(function.apply(json))
+    return (json, vars) ->
+        Optional.of(implementation.apply(json, vars))
             .map(Types::toTypeString)
             .map(JsonUtil::createValue)
             .orElse(NULL);

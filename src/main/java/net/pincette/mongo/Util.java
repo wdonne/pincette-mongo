@@ -9,7 +9,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
-import javax.json.JsonArray;
 import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
@@ -41,7 +40,7 @@ class Util {
         .map(keys -> keys.iterator().next());
   }
 
-  static JsonArray toArray(final Stream<JsonValue> values) {
+  static JsonValue toArray(final Stream<JsonValue> values) {
     return values.reduce(createArrayBuilder(), JsonArrayBuilder::add, (b1, b2) -> b1).build();
   }
 

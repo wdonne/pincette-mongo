@@ -15,6 +15,7 @@ import static net.pincette.mongo.Match.predicate;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -50,6 +51,7 @@ public class TestEvaluationMatch {
   @DisplayName("$regex")
   public void regexTest() {
     assertTrue(predicate(regex("test", "es")).test(o(f("test", v("test")))));
+    assertTrue(predicate(o(f("test", o(f("$regex", v("es")))))).test(o(f("test", v("test")))));
     assertTrue(predicate(regex("test", "ES", "i")).test(o(f("test", v("test")))));
     assertTrue(predicate(regex("test", "/es/")).test(o(f("test", v("test")))));
     assertTrue(predicate(regex("test", "/ES/i")).test(o(f("test", v("test")))));
@@ -62,5 +64,11 @@ public class TestEvaluationMatch {
     assertFalse(predicate(in("test", "/tt/", "/se/")).test(o(f("test", v("test")))));
     assertTrue(predicate(o(f("test", o(f("$not", v("/se/")))))).test(o(f("test", v("test")))));
     assertFalse(predicate(o(f("test", o(f("$not", v("/es/")))))).test(o(f("test", v("test")))));
+    assertTrue(
+        predicate(
+            regex(
+                "test", "^([a-zA-Z0-9_\\-\\.]+)@((\\[[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.)|("
+                    + "([a-zA-Z0-9\\-]+\\.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\\]?)$"))
+            .test(o(f("test", v("Admin@re3.be")))));
   }
 }

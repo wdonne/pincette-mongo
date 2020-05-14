@@ -1,10 +1,10 @@
 package net.pincette.mongo;
 
 import static net.pincette.json.JsonUtil.createValue;
-import static net.pincette.mongo.Expression.applyFunctions;
+import static net.pincette.mongo.Expression.applyImplementations;
 import static net.pincette.mongo.Expression.arraysOperator;
 import static net.pincette.mongo.Expression.arraysOperatorTwo;
-import static net.pincette.mongo.Expression.functions;
+import static net.pincette.mongo.Expression.implementations;
 import static net.pincette.mongo.Expression.isFalse;
 import static net.pincette.mongo.Util.toArray;
 import static net.pincette.util.Collections.intersection;
@@ -16,29 +16,28 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import javax.json.JsonArray;
-import javax.json.JsonObject;
 import javax.json.JsonValue;
 import net.pincette.util.Collections;
 
 class Sets {
   private Sets() {}
 
-  static Function<JsonObject, JsonValue> allElementsTrue(final JsonValue value) {
-    final List<Function<JsonObject, JsonValue>> functions = functions(value);
+  static Implementation allElementsTrue(final JsonValue value) {
+    final List<Implementation> implementations = implementations(value);
 
-    return json ->
+    return (json, vars) ->
         createValue(
-            applyFunctions(functions, json)
+            applyImplementations(implementations, json, vars)
                 .filter(values -> values.stream().noneMatch(Expression::isFalse))
                 .isPresent());
   }
 
-  static Function<JsonObject, JsonValue> anyElementsTrue(final JsonValue value) {
-    final List<Function<JsonObject, JsonValue>> functions = functions(value);
+  static Implementation anyElementsTrue(final JsonValue value) {
+    final List<Implementation> implementations = implementations(value);
 
-    return json ->
+    return (json, vars) ->
         createValue(
-            applyFunctions(functions, json)
+            applyImplementations(implementations, json, vars)
                 .filter(values -> values.stream().anyMatch(v -> !isFalse(v)))
                 .isPresent());
   }
@@ -47,7 +46,7 @@ class Sets {
     return !array.contains(value);
   }
 
-  static Function<JsonObject, JsonValue> setDifference(final JsonValue value) {
+  static Implementation setDifference(final JsonValue value) {
     return arraysOperatorTwo(value, Sets::setDifference);
   }
 
@@ -55,7 +54,7 @@ class Sets {
     return toArray(a1.stream().filter(v -> notIn(a2, v)));
   }
 
-  static Function<JsonObject, JsonValue> setEquals(final JsonValue value) {
+  static Implementation setEquals(final JsonValue value) {
     return arraysOperator(value, Sets::setEquals);
   }
 
@@ -68,7 +67,7 @@ class Sets {
                 .orElse(false));
   }
 
-  static Function<JsonObject, JsonValue> setIntersection(final JsonValue value) {
+  static Implementation setIntersection(final JsonValue value) {
     return arraysOperator(value, Sets::setIntersection);
   }
 
@@ -76,7 +75,7 @@ class Sets {
     return setOp(values, Collections::intersection);
   }
 
-  static Function<JsonObject, JsonValue> setIsSubset(final JsonValue value) {
+  static Implementation setIsSubset(final JsonValue value) {
     return arraysOperatorTwo(value, Sets::setIsSubset);
   }
 
@@ -90,7 +89,7 @@ class Sets {
     return toArray(op.apply(sets(values)).stream());
   }
 
-  static Function<JsonObject, JsonValue> setUnion(final JsonValue value) {
+  static Implementation setUnion(final JsonValue value) {
     return arraysOperator(value, Sets::setUnion);
   }
 

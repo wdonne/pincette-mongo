@@ -25,7 +25,7 @@ public class TestTypesExpression {
         function(o(f("$convert", o(f("input", v(null)), f("to", v(8)), f("onNull", v(false))))))
             .apply(o()));
     assertEquals(
-        v(false),
+        v(null),
         function(
                 o(f("$convert", o(f("input", o()), f("to", v("decimal")), f("onError", v(false))))))
             .apply(o()));

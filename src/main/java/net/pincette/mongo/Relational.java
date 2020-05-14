@@ -2,13 +2,14 @@ package net.pincette.mongo;
 
 import static net.pincette.json.JsonUtil.createValue;
 import static net.pincette.mongo.Cmp.comparable;
-import static net.pincette.mongo.Expression.applyFunctionsNum;
-import static net.pincette.mongo.Expression.functions;
+import static net.pincette.mongo.Expression.applyImplementationsNum;
+import static net.pincette.mongo.Expression.implementations;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.IntPredicate;
-import java.util.function.Predicate;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
@@ -20,49 +21,50 @@ import javax.json.JsonValue;
 class Relational {
   private Relational() {}
 
-  static Function<JsonValue, Function<JsonObject, JsonValue>> asFunction(
-      final Function<JsonValue, Predicate<JsonObject>> predicate) {
-    return value -> (json -> createValue(predicate.apply(value).test(json)));
+  static Operator asFunction(final Function<JsonValue, RelOp> predicate) {
+    return value -> ((json, vars) -> createValue(predicate.apply(value).test(json, vars)));
   }
 
-  private static Predicate<JsonObject> compare(final JsonValue value, final IntPredicate result) {
-    final List<Function<JsonObject, JsonValue>> functions = functions(value);
+  private static RelOp compare(final JsonValue value, final IntPredicate result) {
+    final List<Implementation> implementations = implementations(value);
 
-    return json ->
-        applyFunctionsNum(functions, json, 2)
+    return (json, vars) ->
+        applyImplementationsNum(implementations, json, vars, 2)
             .filter(values -> comparable(values.get(0), values.get(1)))
             .filter(values -> result.test(Cmp.compare(values.get(0), values.get(1))))
             .isPresent();
   }
 
-  static Predicate<JsonObject> eq(final JsonValue value) {
-    final List<Function<JsonObject, JsonValue>> functions = functions(value);
+  static RelOp eq(final JsonValue value) {
+    final List<Implementation> implementations = implementations(value);
 
-    return json ->
-        applyFunctionsNum(functions, json, 2)
+    return (json, vars) ->
+        applyImplementationsNum(implementations, json, vars, 2)
             .filter(values -> values.get(0).equals(values.get(1)))
             .isPresent();
   }
 
-  static Predicate<JsonObject> gt(final JsonValue value) {
+  static RelOp gt(final JsonValue value) {
     return compare(value, result -> result > 0);
   }
 
-  static Predicate<JsonObject> gte(final JsonValue value) {
+  static RelOp gte(final JsonValue value) {
     return compare(value, result -> result >= 0);
   }
 
-  static Predicate<JsonObject> lt(final JsonValue value) {
+  static RelOp lt(final JsonValue value) {
     return compare(value, result -> result < 0);
   }
 
-  static Predicate<JsonObject> lte(final JsonValue value) {
+  static RelOp lte(final JsonValue value) {
     return compare(value, result -> result <= 0);
   }
 
-  static Predicate<JsonObject> ne(final JsonValue value) {
-    final Predicate<JsonObject> eq = eq(value);
+  static RelOp ne(final JsonValue value) {
+    final BiPredicate<JsonObject, Map<String, JsonValue>> eq = eq(value);
 
-    return json -> !eq.test(json);
+    return (json, vars) -> !eq.test(json, vars);
   }
+
+  interface RelOp extends BiPredicate<JsonObject, Map<String, JsonValue>> {}
 }

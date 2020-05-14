@@ -14,6 +14,55 @@ import org.junit.jupiter.api.Test;
 
 public class TestExpression {
   @Test
+  @DisplayName("$jslt")
+  public void jslt() {
+    assertEquals(
+        o(f("f", v("v")), f("test", v("test"))),
+        function(
+                o(
+                    f(
+                        "$jslt",
+                        o(f("input", o(f("f", v("v")))), f("script", v("resource:/test.jslt"))))))
+            .apply(o()));
+  }
+
+  @Test
+  @DisplayName("$let")
+  public void let() {
+    assertEquals(
+        v("test11test2test3"),
+        function(
+                o(
+                    f(
+                        "$let",
+                        o(
+                            f(
+                                "vars",
+                                o(
+                                    f("test1", v("test1")),
+                                    f("test2", o(f("$literal", o(f("value", v("test2")))))))),
+                            f(
+                                "in",
+                                o(
+                                    f(
+                                        "$let",
+                                        o(
+                                            f(
+                                                "vars",
+                                                o(f("test1", v("test11")), f("test3", v("test3")))),
+                                            f(
+                                                "in",
+                                                o(
+                                                    f(
+                                                        "$concat",
+                                                        a(
+                                                            v("$$test1"),
+                                                            v("$$test2.value"),
+                                                            v("$$test3")))))))))))))
+            .apply(o()));
+  }
+
+  @Test
   @DisplayName("$literal")
   public void literal() {
     final JsonArray a = a(v(0), v(1));
@@ -45,5 +94,20 @@ public class TestExpression {
         function(o(f("$objectToArray", v("$test"))))
             .apply(o(f("test", o(f("test1", v(0)), f("test2", v(1)))))));
     assertEquals(a(), function(o(f("$objectToArray", v("$test")))).apply(o(f("test", o()))));
+  }
+
+  @Test
+  @DisplayName("$unescape")
+  public void unescape() {
+    assertEquals(
+        o(f("$eq", a(o(f("$gt", a(v(1), v(0))))))),
+        function(o(f("$unescape", o(f("#$eq", a(o(f("#$gt", a(v(1), v(0)))))))))).apply(o()));
+  }
+
+  @Test
+  @DisplayName("field value")
+  public void value() {
+    assertEquals(v(true), function(o(f("$eq", a(v("$test"), v(1))))).apply(o(f("test", v(1)))));
+    assertEquals(v(true), function(o(f("$eq", a(v("$test2"), v(null))))).apply(o(f("test", v(1)))));
   }
 }

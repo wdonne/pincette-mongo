@@ -14,12 +14,12 @@ import static net.pincette.json.JsonUtil.asString;
 import static net.pincette.json.JsonUtil.isNumber;
 import static net.pincette.json.JsonUtil.isString;
 import static net.pincette.mongo.Cmp.normalize;
-import static net.pincette.mongo.Expression.applyFunctions;
-import static net.pincette.mongo.Expression.applyFunctionsNum;
-import static net.pincette.mongo.Expression.function;
-import static net.pincette.mongo.Expression.functions;
+import static net.pincette.mongo.Expression.applyImplementations;
+import static net.pincette.mongo.Expression.applyImplementationsNum;
 import static net.pincette.mongo.Expression.getInteger;
 import static net.pincette.mongo.Expression.getString;
+import static net.pincette.mongo.Expression.implementation;
+import static net.pincette.mongo.Expression.implementations;
 import static net.pincette.mongo.Expression.memberFunction;
 import static net.pincette.mongo.Expression.stringsOperator;
 import static net.pincette.mongo.Match.compileRegex;
@@ -35,7 +35,6 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.stream.Stream;
 import javax.json.Json;
-import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonString;
 import javax.json.JsonValue;
@@ -60,11 +59,11 @@ class Strings {
         .build();
   }
 
-  private static JsonArray captureAll(final Matcher matcher) {
+  private static JsonValue captureAll(final Matcher matcher) {
     return toArray(takeWhile(matcher, m -> m, Matcher::find).map(Strings::capture));
   }
 
-  static Function<JsonObject, JsonValue> concat(final JsonValue value) {
+  static Implementation concat(final JsonValue value) {
     return stringsOperator(value, Strings::concat);
   }
 
@@ -78,11 +77,12 @@ class Strings {
         : empty();
   }
 
-  static Function<JsonObject, JsonValue> indexOfCP(final JsonValue value) {
-    final List<Function<JsonObject, JsonValue>> functions = functions(value);
+  static Implementation indexOfCP(final JsonValue value) {
+    final List<Implementation> implementations = implementations(value);
 
-    return json ->
-        applyFunctions(functions, json, fncs -> fncs.size() >= 2 && fncs.size() <= 4)
+    return (json, vars) ->
+        applyImplementations(
+                implementations, json, vars, fncs -> fncs.size() >= 2 && fncs.size() <= 4)
             .filter(
                 values ->
                     isString(values.get(0))
@@ -113,20 +113,21 @@ class Strings {
     return isNumber(value) && asInt(value) >= 0;
   }
 
-  static Function<JsonObject, JsonValue> ltrim(final JsonValue value) {
+  static Implementation ltrim(final JsonValue value) {
     return trim(value, true, false);
   }
 
-  private static Function<JsonObject, JsonValue> regex(
+  private static Implementation regex(
       final JsonValue value, final Function<Matcher, JsonValue> capture) {
-    final List<Function<JsonObject, JsonValue>> functions =
+    final List<Implementation> implementations =
         list(
             memberFunction(value, INPUT),
             memberFunction(value, REGEX),
             memberFunction(value, OPTIONS));
 
-    return json ->
-        applyFunctions(functions, json, fncs -> fncs.get(0) != null && fncs.get(1) != null)
+    return (json, vars) ->
+        applyImplementations(
+                implementations, json, vars, fncs -> fncs.get(0) != null && fncs.get(1) != null)
             .filter(
                 values ->
                     isString(values.get(0))
@@ -142,19 +143,19 @@ class Strings {
             .orElse(NULL);
   }
 
-  static Function<JsonObject, JsonValue> regexFind(final JsonValue value) {
+  static Implementation regexFind(final JsonValue value) {
     return regex(value, matcher -> matcher.find() ? capture(matcher) : NULL);
   }
 
-  static Function<JsonObject, JsonValue> regexFindAll(final JsonValue value) {
+  static Implementation regexFindAll(final JsonValue value) {
     return regex(value, Strings::captureAll);
   }
 
-  static Function<JsonObject, JsonValue> regexMatch(final JsonValue value) {
+  static Implementation regexMatch(final JsonValue value) {
     return regex(value, matcher -> JsonUtil.createValue(matcher.find()));
   }
 
-  static Function<JsonObject, JsonValue> rtrim(final JsonValue value) {
+  static Implementation rtrim(final JsonValue value) {
     return trim(value, false, true);
   }
 
@@ -162,7 +163,7 @@ class Strings {
     return (chars != null && chars.indexOf(c) != -1) || (chars == null && isWhitespace(c));
   }
 
-  static Function<JsonObject, JsonValue> split(final JsonValue value) {
+  static Implementation split(final JsonValue value) {
     return stringTwo(value, Strings::split);
   }
 
@@ -170,20 +171,20 @@ class Strings {
     return toArray(stream(s.split(quote(delimiter))).map(Json::createValue));
   }
 
-  static Function<JsonObject, JsonValue> strLenCP(final JsonValue value) {
+  static Implementation strLenCP(final JsonValue value) {
     return string(value, s -> createValue(s.length()));
   }
 
-  static Function<JsonObject, JsonValue> strcasecmp(final JsonValue value) {
+  static Implementation strcasecmp(final JsonValue value) {
     return stringTwo(value, (s1, s2) -> createValue(normalize(s1.compareToIgnoreCase(s2))));
   }
 
-  private static Function<JsonObject, JsonValue> string(
+  private static Implementation string(
       final JsonValue value, final Function<String, JsonValue> op) {
-    final Function<JsonObject, JsonValue> function = function(value);
+    final Implementation implementation = implementation(value);
 
-    return json ->
-        Optional.of(function.apply(json))
+    return (json, vars) ->
+        Optional.of(implementation.apply(json, vars))
             .filter(JsonUtil::isString)
             .map(JsonUtil::asString)
             .map(JsonString::getString)
@@ -191,33 +192,33 @@ class Strings {
             .orElse(NULL);
   }
 
-  private static Function<JsonObject, JsonValue> stringOrNull(
+  private static Implementation stringOrNull(
       final JsonValue value, final Function<String, JsonValue> op) {
-    final Function<JsonObject, JsonValue> function = function(value);
+    final Implementation implementation = implementation(value);
 
-    return json ->
-        Optional.of(function.apply(json))
+    return (json, vars) ->
+        Optional.of(implementation.apply(json, vars))
             .filter(v -> NULL.equals(v) || isString(v))
             .map(v -> NULL.equals(value) ? createValue("") : op.apply(asString(v).getString()))
             .orElse(NULL);
   }
 
-  private static Function<JsonObject, JsonValue> stringTwo(
+  private static Implementation stringTwo(
       final JsonValue value, final BiFunction<String, String, JsonValue> op) {
-    final List<Function<JsonObject, JsonValue>> functions = functions(value);
+    final List<Implementation> implementations = implementations(value);
 
-    return json ->
-        applyFunctionsNum(functions, json, 2)
+    return (json, vars) ->
+        applyImplementationsNum(implementations, json, vars, 2)
             .filter(values -> isString(values.get(0)) && isString(values.get(1)))
             .map(values -> op.apply(getString(values, 0), getString(values, 1)))
             .orElse(NULL);
   }
 
-  static Function<JsonObject, JsonValue> substrCP(final JsonValue value) {
-    final List<Function<JsonObject, JsonValue>> functions = functions(value);
+  static Implementation substrCP(final JsonValue value) {
+    final List<Implementation> implementations = implementations(value);
 
-    return json ->
-        applyFunctionsNum(functions, json, 3)
+    return (json, vars) ->
+        applyImplementationsNum(implementations, json, vars, 3)
             .filter(
                 values ->
                     (NULL.equals(values.get(0)) || isString(values.get(0)))
@@ -236,25 +237,25 @@ class Strings {
     return createValue(s.substring(index, min(s.length(), index + count)));
   }
 
-  static Function<JsonObject, JsonValue> toLower(final JsonValue value) {
+  static Implementation toLower(final JsonValue value) {
     return stringOrNull(value, s -> createValue(s.toLowerCase()));
   }
 
-  static Function<JsonObject, JsonValue> toUpper(final JsonValue value) {
+  static Implementation toUpper(final JsonValue value) {
     return stringOrNull(value, s -> createValue(s.toUpperCase()));
   }
 
-  static Function<JsonObject, JsonValue> trim(final JsonValue value) {
+  static Implementation trim(final JsonValue value) {
     return trim(value, true, true);
   }
 
-  private static Function<JsonObject, JsonValue> trim(
+  private static Implementation trim(
       final JsonValue value, final boolean start, final boolean end) {
-    final List<Function<JsonObject, JsonValue>> functions =
+    final List<Implementation> implementations =
         list(memberFunction(value, INPUT), memberFunction(value, CHARS));
 
-    return json ->
-        applyFunctions(functions, json, fncs -> fncs.get(0) != null)
+    return (json, vars) ->
+        applyImplementations(implementations, json, vars, fncs -> fncs.get(0) != null)
             .filter(
                 values ->
                     isString(values.get(0)) && (values.get(1) == null || isString(values.get(1))))

@@ -1,5 +1,9 @@
 package net.pincette.mongo;
 
+import static java.util.Collections.emptyMap;
+import static java.util.Optional.ofNullable;
+import static java.util.logging.Level.FINEST;
+import static java.util.logging.Logger.getLogger;
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
 import static java.util.regex.Pattern.COMMENTS;
 import static java.util.regex.Pattern.DOTALL;
@@ -14,7 +18,6 @@ import static net.pincette.json.JsonUtil.asArray;
 import static net.pincette.json.JsonUtil.asInt;
 import static net.pincette.json.JsonUtil.asLong;
 import static net.pincette.json.JsonUtil.asNumber;
-import static net.pincette.json.JsonUtil.asObject;
 import static net.pincette.json.JsonUtil.asString;
 import static net.pincette.json.JsonUtil.getValue;
 import static net.pincette.json.JsonUtil.isArray;
@@ -26,6 +29,7 @@ import static net.pincette.json.JsonUtil.isLong;
 import static net.pincette.json.JsonUtil.isNumber;
 import static net.pincette.json.JsonUtil.isObject;
 import static net.pincette.json.JsonUtil.isString;
+import static net.pincette.json.JsonUtil.string;
 import static net.pincette.json.JsonUtil.toJsonPointer;
 import static net.pincette.mongo.BsonUtil.fromBson;
 import static net.pincette.mongo.BsonUtil.toBsonDocument;
@@ -34,12 +38,15 @@ import static net.pincette.mongo.Cmp.compareStrings;
 import static net.pincette.mongo.Expression.function;
 import static net.pincette.mongo.Expression.isFalse;
 import static net.pincette.mongo.Util.key;
+import static net.pincette.util.Collections.map;
+import static net.pincette.util.Collections.merge;
 import static net.pincette.util.Collections.set;
 import static net.pincette.util.Or.tryWith;
 import static net.pincette.util.Pair.pair;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -49,6 +56,7 @@ import java.util.function.Function;
 import java.util.function.IntSupplier;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import javax.json.JsonArray;
 import javax.json.JsonNumber;
@@ -56,6 +64,7 @@ import javax.json.JsonObject;
 import javax.json.JsonString;
 import javax.json.JsonValue;
 import net.pincette.json.JsonUtil;
+import net.pincette.mongo.Relational.RelOp;
 import net.pincette.util.Pair;
 import org.bson.conversions.Bson;
 
@@ -111,6 +120,33 @@ public class Match {
   private static final Set<String> COMBINERS = set(AND, EXPR, NOR, OR);
   private static final Set<String> SUPPORTED_TYPES =
       set(ARRAY, BOOL, DATE, DECIMAL, DOUBLE, INT, LONG, NULL_TYPE, OBJECT, STRING, TIMESTAMP);
+  private static final Logger logger = getLogger("net.pincette.mongo.expressions");
+  private static Map<String, QueryOperator> queryOps;
+  private static final Map<String, QueryOperator> QUERY_OPERATORS =
+      map(
+          pair(ALL, Match::all),
+          pair(BITS_ALL_CLEAR, Match::bitsAllClear),
+          pair(BITS_ALL_SET, Match::bitsAllSet),
+          pair(BITS_ANY_CLEAR, Match::bitsAnyClear),
+          pair(BITS_ANY_SET, Match::bitsAnySet),
+          pair(ELEM_MATCH, Match::elemMatch),
+          pair(EQ, Match::eq),
+          pair(EXISTS, Match::exists),
+          pair(GT, Match::gt),
+          pair(GTE, Match::gte),
+          pair(IN, Match::in),
+          pair(LT, Match::lt),
+          pair(LTE, Match::lte),
+          pair(MOD, Match::mod),
+          pair(NE, Match::ne),
+          pair(NIN, Match::nin),
+          pair(NOT, Match::not),
+          pair(SIZE, Match::size),
+          pair(TYPE, Match::type));
+
+  static {
+    queryOps = QUERY_OPERATORS;
+  }
 
   private Match() {}
 
@@ -168,17 +204,17 @@ public class Match {
       case AND:
         return and(value);
       case EQ:
-        return Relational.eq(value);
+        return booleanExpression(Relational::eq, value);
       case GT:
-        return Relational.gt(value);
+        return booleanExpression(Relational::gt, value);
       case GTE:
-        return Relational.gte(value);
+        return booleanExpression(Relational::gte, value);
       case LT:
-        return Relational.lt(value);
+        return booleanExpression(Relational::lt, value);
       case LTE:
-        return Relational.lte(value);
+        return booleanExpression(Relational::lte, value);
       case NE:
-        return Relational.ne(value);
+        return booleanExpression(Relational::ne, value);
       case NOR:
         return nor(value);
       case OR:
@@ -186,6 +222,14 @@ public class Match {
       default:
         return null;
     }
+  }
+
+  private static Predicate<JsonObject> booleanExpression(
+      final Function<JsonValue, RelOp> op, final JsonValue value) {
+    final RelOp relOp = op.apply(value);
+    final Map<String, JsonValue> variables = emptyMap();
+
+    return json -> relOp.test(json, variables);
   }
 
   private static Predicate<JsonObject> combine(
@@ -221,9 +265,14 @@ public class Match {
   }
 
   private static Predicate<JsonValue> elemMatchPredicate(final String key, final JsonValue value) {
-    return Optional.ofNullable(predicate(key, value))
+    return ofNullable(predicate(key, value))
         .orElseGet(
-            () -> (json -> isObject(json) && predicateField(key, value).test(json.asJsonObject())));
+            () -> {
+              final Predicate<JsonObject> predicate = predicateField(key, value);
+
+              return json ->
+                  predicate != null && isObject(json) && predicate.test(json.asJsonObject());
+            });
   }
 
   private static Predicate<JsonValue> eq(final JsonValue value) {
@@ -269,7 +318,9 @@ public class Match {
   }
 
   private static Pattern getRegex(final JsonObject json) {
-    return compileRegex(json.getString(REGEX), json.getString(OPTIONS, null));
+    return ofNullable(json.getString(REGEX, null))
+        .map(regex -> compileRegex(regex, json.getString(OPTIONS, null)))
+        .orElse(null);
   }
 
   private static Optional<Predicate<JsonValue>> getRegex(final JsonValue value) {
@@ -340,25 +391,25 @@ public class Match {
     return v -> v != null && values.stream().anyMatch(predicate -> predicate.test(v));
   }
 
-  private static boolean isExression(final JsonValue value) {
-    return isObject(value) && key(asObject(value)).filter(k -> k.startsWith("$")).isPresent();
-  }
-
-  private static boolean isRegexp(final JsonValue value) {
+  private static boolean isExpression(final JsonValue value) {
     return Optional.of(value)
         .filter(JsonUtil::isObject)
         .map(JsonValue::asJsonObject)
         .map(JsonObject::keySet)
         .filter(
             keys ->
-                (keys.size() == 1 && keys.contains(REGEX))
-                    || (keys.size() == 2
-                        && keys.contains(REGEX)
-                        && keys.contains(OPTIONS)
-                        && Optional.of(value.asJsonObject().getString(OPTIONS))
-                            .filter(options -> options.equals("") || options.matches("[imsx]+"))
-                            .isPresent()))
+                (keys.size() == 1 && keys.iterator().next().startsWith("$"))
+                    || isRegexp(keys, value.asJsonObject()))
         .isPresent();
+  }
+
+  private static boolean isRegexp(final Set<String> keys, final JsonObject expression) {
+    return keys.size() == 2
+        && keys.contains(REGEX)
+        && keys.contains(OPTIONS)
+        && Optional.of(expression.getString(OPTIONS))
+            .filter(options -> options.equals("") || options.matches("[imsx]+"))
+            .isPresent();
   }
 
   private static boolean isRegexp(final String s) {
@@ -392,6 +443,31 @@ public class Match {
       default:
         return false;
     }
+  }
+
+  private static boolean log(
+      final JsonObject expression, final JsonObject json, final boolean result) {
+    logger.log(
+        FINEST,
+        () ->
+            "Expression:\n"
+                + string(expression)
+                + "\n\nWith:\n"
+                + string(json)
+                + "\n\nYields: "
+                + result);
+
+    return result;
+  }
+
+  /**
+   * If you set the log level to FINEST you will get a trace.
+   *
+   * @return The logger with the name "net.pincette.mongo.expression".
+   * @since 1.3
+   */
+  public static Logger logger() {
+    return logger;
   }
 
   private static Predicate<JsonValue> lt(final JsonValue value) {
@@ -489,7 +565,7 @@ public class Match {
 
   private static Predicate<JsonValue> not(final JsonValue value) {
     final Predicate<JsonValue> predicate =
-        isObject(value) ? predicateField(value.asJsonObject()) : getRegex(value).orElse(v -> true);
+        isObject(value) ? predicateValue(value.asJsonObject()) : getRegex(value).orElse(v -> true);
 
     return v -> !predicate.test(v);
   }
@@ -501,7 +577,9 @@ public class Match {
   private static String pattern(final String regex) {
     return regex.substring(
         regex.startsWith("/") ? 1 : 0,
-        Optional.of(regex.lastIndexOf('/')).filter(index -> index != -1).orElseGet(regex::length));
+        Optional.of(regex.lastIndexOf('/'))
+            .filter(index -> index != -1 && regex.startsWith("/"))
+            .orElseGet(regex::length));
   }
 
   /**
@@ -514,13 +592,15 @@ public class Match {
   public static Predicate<JsonObject> predicate(final JsonObject expression) {
     final Function<String, JsonValue> value = key -> expression.getValue("/" + key);
 
-    return key(expression)
-        .map(
-            key ->
-                COMBINERS.contains(key)
-                    ? predicateCombiner(key, value.apply(key))
-                    : predicateField(key, value.apply(key)))
-        .orElse(json -> false);
+    return wrapLogging(
+        key(expression)
+            .map(
+                key ->
+                    COMBINERS.contains(key)
+                        ? predicateCombiner(key, value.apply(key))
+                        : predicateField(key, value.apply(key)))
+            .orElse(json -> false),
+        expression);
   }
 
   /**
@@ -535,48 +615,7 @@ public class Match {
   }
 
   private static Predicate<JsonValue> predicate(final String key, final JsonValue value) {
-    switch (key) {
-      case ALL:
-        return all(value);
-      case BITS_ALL_CLEAR:
-        return bitsAllClear(value);
-      case BITS_ALL_SET:
-        return bitsAllSet(value);
-      case BITS_ANY_CLEAR:
-        return bitsAnyClear(value);
-      case BITS_ANY_SET:
-        return bitsAnySet(value);
-      case ELEM_MATCH:
-        return elemMatch(value);
-      case EQ:
-        return eq(value);
-      case EXISTS:
-        return exists(value);
-      case GT:
-        return gt(value);
-      case GTE:
-        return gte(value);
-      case IN:
-        return in(value);
-      case LT:
-        return lt(value);
-      case LTE:
-        return lte(value);
-      case MOD:
-        return mod(value);
-      case NE:
-        return ne(value);
-      case NIN:
-        return nin(value);
-      case NOT:
-        return not(value);
-      case SIZE:
-        return size(value);
-      case TYPE:
-        return type(value);
-      default:
-        return null;
-    }
+    return ofNullable(queryOps.get(key)).map(fn -> fn.apply(value)).orElse(null);
   }
 
   private static Predicate<JsonObject> predicateCombiner(final String key, final JsonValue value) {
@@ -594,25 +633,57 @@ public class Match {
     }
   }
 
-  private static Predicate<JsonValue> predicateField(final JsonObject expression) {
-    return key(expression)
-        .map(key -> predicate(key, expression.getValue("/" + key)))
-        .orElse(v -> false);
-  }
-
   private static Predicate<JsonObject> predicateField(final String field, final JsonValue value) {
-    final Supplier<Predicate<JsonValue>> tryRegex =
-        () -> isRegexp(value) ? regex(value.asJsonObject()) : eq(value);
     final Predicate<JsonValue> predicate =
-        isExression(value) ? predicateField(value.asJsonObject()) : tryRegex.get();
+        isExpression(value) ? predicateValue(value.asJsonObject()) : eq(value);
 
     return json -> predicate.test(getValue(json, toJsonPointer(field)).orElse(null));
+  }
+
+  /**
+   * Constructs a predicate to test a JSON value.
+   *
+   * @param expression the MongoDB query.
+   * @return The predicate, which is stateless.
+   * @since 1.3
+   */
+  public static Predicate<JsonValue> predicateValue(final JsonObject expression) {
+    return Optional.of(expression.keySet())
+        .filter(keys -> keys.size() == 1)
+        .map(keys -> keys.iterator().next())
+        .map(key -> predicate(key, expression.getValue("/" + key)))
+        .orElseGet(() -> regex(expression));
   }
 
   private static Predicate<JsonValue> regex(final JsonObject json) {
     final Pattern pattern = getRegex(json);
 
     return v -> v != null && pattern != null && matches(pattern, v);
+  }
+
+  /**
+   * Globally adds an additional query operator to the known query operators. This should be called
+   * only once for each extension. There shouldn't be an overlap of the operator names, but if it
+   * occurs the latest registration always wins.
+   *
+   * @param name the name of the operator.
+   * @param extension the extension.
+   * @since 1.3
+   */
+  public static void registerExtension(final String name, final QueryOperator extension) {
+    queryOps.put(name, extension);
+  }
+
+  /**
+   * Globally adds additional query operators to the known query operators. This should be called
+   * only once for each set of extensions. There shouldn't be an overlap of the operator names, but
+   * if it occurs the latest registration always wins.
+   *
+   * @param extensions the extensions.
+   * @since 1.3
+   */
+  public static void registerExtensions(final Map<String, QueryOperator> extensions) {
+    queryOps = merge(queryOps, extensions);
   }
 
   private static Predicate<JsonValue> size(final JsonValue value) {
@@ -638,5 +709,13 @@ public class Match {
     final List<String> types = supportedTypes(value);
 
     return v -> v != null && types.stream().anyMatch(t -> isType(v, t));
+  }
+
+  private static Predicate<JsonObject> wrapLogging(
+      final Predicate<JsonObject> predicate, final JsonObject expression) {
+    return json ->
+        Optional.of(predicate.test(json))
+            .map(result -> log(expression, json, result))
+            .orElse(false);
   }
 }

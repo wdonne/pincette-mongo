@@ -3,11 +3,12 @@ package net.pincette.mongo;
 import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Integer.max;
 import static java.lang.Math.min;
+import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.concat;
 import static java.util.stream.Stream.generate;
 import static javax.json.JsonValue.NULL;
-import static net.pincette.mongo.Expression.applyFunctions;
+import static net.pincette.mongo.Expression.applyImplementations;
 import static net.pincette.mongo.Expression.isFalse;
 import static net.pincette.mongo.Expression.member;
 import static net.pincette.mongo.Expression.memberFunction;
@@ -18,9 +19,7 @@ import static net.pincette.util.StreamUtil.rangeExclusive;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.stream.Stream;
-import javax.json.JsonObject;
 import javax.json.JsonValue;
 import net.pincette.json.JsonUtil;
 import net.pincette.util.Pair;
@@ -75,13 +74,13 @@ class Zip {
                         .orElseGet(() -> defaults.get(index - shortest))));
   }
 
-  static Function<JsonObject, JsonValue> zip(final JsonValue value) {
-    final Function<JsonObject, JsonValue> defaults = memberFunction(value, DEFAULTS);
-    final List<Function<JsonObject, JsonValue>> functions = memberFunctions(value, INPUTS);
+  static Implementation zip(final JsonValue value) {
+    final Implementation defaults = memberFunction(value, DEFAULTS);
+    final List<Implementation> implementations = memberFunctions(value, INPUTS);
     final boolean useLongest = member(value, USE_LONGEST_LENGTH, v -> !isFalse(v)).orElse(false);
 
-    return json ->
-        applyFunctions(functions, json)
+    return (json, vars) ->
+        applyImplementations(implementations, json, vars)
             .filter(values -> values.stream().allMatch(JsonUtil::isArray))
             .map(values -> pair(values, shortestLongest(values)))
             .map(
@@ -91,8 +90,8 @@ class Zip {
                         useLongest ? pair.second.second : pair.second.first,
                         pair.second.first,
                         defaults(
-                            Optional.ofNullable(defaults)
-                                .map(d -> d.apply(json))
+                            ofNullable(defaults)
+                                .map(d -> d.apply(json, vars))
                                 .orElseGet(JsonUtil::emptyArray),
                             pair.second.second)))
             .orElse(NULL);

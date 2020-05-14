@@ -1,6 +1,7 @@
 package net.pincette.mongo;
 
 import static java.lang.Integer.max;
+import static java.util.stream.Collectors.toList;
 import static javax.json.Json.createArrayBuilder;
 import static javax.json.Json.createObjectBuilder;
 import static javax.json.Json.createValue;
@@ -9,16 +10,21 @@ import static javax.json.JsonValue.NULL;
 import static javax.json.JsonValue.TRUE;
 import static net.pincette.json.JsonUtil.asArray;
 import static net.pincette.json.JsonUtil.asInt;
+import static net.pincette.json.JsonUtil.asString;
 import static net.pincette.json.JsonUtil.emptyArray;
 import static net.pincette.json.JsonUtil.isInt;
 import static net.pincette.json.JsonUtil.isNumber;
 import static net.pincette.json.JsonUtil.isString;
-import static net.pincette.mongo.Expression.applyFunctions;
-import static net.pincette.mongo.Expression.applyFunctionsNum;
+import static net.pincette.mongo.Expression.applyImplementations;
+import static net.pincette.mongo.Expression.applyImplementationsNum;
 import static net.pincette.mongo.Expression.arraysOperator;
-import static net.pincette.mongo.Expression.function;
-import static net.pincette.mongo.Expression.functions;
 import static net.pincette.mongo.Expression.getString;
+import static net.pincette.mongo.Expression.implementation;
+import static net.pincette.mongo.Expression.implementations;
+import static net.pincette.mongo.Expression.isFalse;
+import static net.pincette.mongo.Expression.member;
+import static net.pincette.mongo.Expression.memberFunction;
+import static net.pincette.mongo.Expression.value;
 import static net.pincette.mongo.Util.toArray;
 import static net.pincette.util.Collections.reverse;
 import static net.pincette.util.StreamUtil.rangeExclusive;
@@ -28,21 +34,30 @@ import static net.pincette.util.StreamUtil.zip;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import java.util.function.IntSupplier;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
+import javax.json.JsonString;
 import javax.json.JsonValue;
 import net.pincette.json.JsonUtil;
 
 class Arrays {
+  private static final String AS = "as";
+  private static final String COND = "cond";
+  private static final String IN = "in";
+  private static final String INITIAL_VALUE = "initialValue";
+  private static final String INPUT = "input";
+  private static final String THIS = "this";
+  private static final String VALUE = "$$value";
+
   private Arrays() {}
 
-  static Function<JsonObject, JsonValue> arrayElemAt(final JsonValue value) {
-    final List<Function<JsonObject, JsonValue>> functions = functions(value);
+  static Implementation arrayElemAt(final JsonValue value) {
+    final List<Implementation> implementations = implementations(value);
 
-    return json ->
-        applyFunctionsNum(functions, json, 2)
+    return (json, vars) ->
+        applyImplementationsNum(implementations, json, vars, 2)
             .filter(
                 values ->
                     JsonUtil.isArray(values.get(0))
@@ -56,11 +71,11 @@ class Arrays {
     return array.get(index >= 0 ? index : (array.size() + index));
   }
 
-  static Function<JsonObject, JsonValue> arrayToObject(final JsonValue value) {
-    final Function<JsonObject, JsonValue> function = function(value);
+  static Implementation arrayToObject(final JsonValue value) {
+    final Implementation implementation = implementation(value);
 
-    return json ->
-        Optional.of(function.apply(json))
+    return (json, vars) ->
+        Optional.of(implementation.apply(json, vars))
             .filter(JsonUtil::isArray)
             .map(JsonValue::asJsonArray)
             .filter(array -> array.stream().allMatch(v -> isKV(v) || isObjectArray(v)))
@@ -87,7 +102,7 @@ class Arrays {
         .build();
   }
 
-  static Function<JsonObject, JsonValue> concatArrays(final JsonValue value) {
+  static Implementation concatArrays(final JsonValue value) {
     return arraysOperator(value, Arrays::concatArrays);
   }
 
@@ -95,22 +110,33 @@ class Arrays {
     return toArray(array.stream().flatMap(JsonArray::stream));
   }
 
-  static Function<JsonObject, JsonValue> in(final JsonValue value) {
-    final List<Function<JsonObject, JsonValue>> functions = functions(value);
+  static Implementation filter(final JsonValue value) {
+    return mapper(
+        value,
+        (array, values) ->
+            toArray(
+                zip(array.stream(), values.stream())
+                    .filter(pair -> !isFalse(pair.second))
+                    .map(pair -> pair.first)));
+  }
 
-    return json ->
-        applyFunctionsNum(functions, json, 2)
+  static Implementation in(final JsonValue value) {
+    final List<Implementation> implementations = implementations(value);
+
+    return (json, vars) ->
+        applyImplementationsNum(implementations, json, vars, 2)
             .filter(values -> JsonUtil.isArray(values.get(1)))
             .map(values -> values.get(1).asJsonArray().contains(values.get(0)))
             .map(JsonUtil::createValue)
             .orElse(NULL);
   }
 
-  static Function<JsonObject, JsonValue> indexOfArray(final JsonValue value) {
-    final List<Function<JsonObject, JsonValue>> functions = functions(value);
+  static Implementation indexOfArray(final JsonValue value) {
+    final List<Implementation> implementations = implementations(value);
 
-    return json ->
-        applyFunctions(functions, json, fncs -> fncs.size() >= 2 && fncs.size() <= 4)
+    return (json, vars) ->
+        applyImplementations(
+                implementations, json, vars, fncs -> fncs.size() >= 2 && fncs.size() <= 4)
             .filter(
                 values ->
                     JsonUtil.isArray(values.get(0))
@@ -135,11 +161,14 @@ class Arrays {
         .orElseGet(() -> createValue(-1));
   }
 
-  static Function<JsonObject, JsonValue> isArray(final JsonValue value) {
-    final Function<JsonObject, JsonValue> function = function(value);
+  static Implementation isArray(final JsonValue value) {
+    final Implementation implementation = implementation(value);
 
-    return json ->
-        Optional.of(function.apply(json)).filter(JsonUtil::isArray).map(a -> TRUE).orElse(FALSE);
+    return (json, vars) ->
+        Optional.of(implementation.apply(json, vars))
+            .filter(JsonUtil::isArray)
+            .map(a -> TRUE)
+            .orElse(FALSE);
   }
 
   private static boolean isKV(final JsonValue value) {
@@ -158,11 +187,45 @@ class Arrays {
         .isPresent();
   }
 
-  static Function<JsonObject, JsonValue> objectToArray(final JsonValue value) {
-    final Function<JsonObject, JsonValue> function = function(value);
+  static Implementation mapOp(final JsonValue value) {
+    return mapper(value, (array, values) -> toArray(values.stream()));
+  }
 
-    return json ->
-        Optional.of(function.apply(json))
+  private static Implementation mapper(
+      final JsonValue value, final BiFunction<JsonArray, List<JsonValue>, JsonValue> combine) {
+    final JsonValue in =
+        member(value, IN, v -> v).orElseGet(() -> member(value, COND, v -> v).orElse(null));
+    final Implementation input = memberFunction(value, INPUT);
+    final String variable = member(value, AS, v -> asString(v).getString()).orElse(THIS);
+
+    return (json, vars) ->
+        input != null && in != null
+            ? Optional.of(input.apply(json, vars))
+                .filter(JsonUtil::isArray)
+                .map(JsonValue::asJsonArray)
+                .map(
+                    array ->
+                        combine.apply(
+                            array,
+                            mapper(array, "$$" + variable, in).stream()
+                                .map(i -> i.apply(json, vars))
+                                .collect(toList())))
+                .orElse(NULL)
+            : NULL;
+  }
+
+  private static List<Implementation> mapper(
+      final JsonArray values, final String variable, final JsonValue expression) {
+    return values.stream()
+        .map(v -> implementation(replaceVariable(expression, variable, v)))
+        .collect(toList());
+  }
+
+  static Implementation objectToArray(final JsonValue value) {
+    final Implementation implementation = implementation(value);
+
+    return (json, vars) ->
+        Optional.of(implementation.apply(json, vars))
             .filter(JsonUtil::isObject)
             .map(JsonValue::asJsonObject)
             .map(Arrays::objectToArray)
@@ -178,11 +241,12 @@ class Arrays {
         .build();
   }
 
-  static Function<JsonObject, JsonValue> range(final JsonValue value) {
-    final List<Function<JsonObject, JsonValue>> functions = functions(value);
+  static Implementation range(final JsonValue value) {
+    final List<Implementation> implementations = implementations(value);
 
-    return json ->
-        applyFunctions(functions, json, fncs -> fncs.size() == 2 || fncs.size() == 3)
+    return (json, vars) ->
+        applyImplementations(
+                implementations, json, vars, fncs -> fncs.size() == 2 || fncs.size() == 3)
             .filter(
                 values ->
                     isInt(values.get(0))
@@ -202,22 +266,86 @@ class Arrays {
         : JsonUtil.createValue(rangeExclusive(start, end, Math.abs(step)));
   }
 
-  static Function<JsonObject, JsonValue> reverseArray(final JsonValue value) {
-    final Function<JsonObject, JsonValue> function = function(value);
+  static Implementation reduce(final JsonValue value) {
+    final JsonValue in = member(value, IN, v -> v).orElse(null);
+    final Implementation initial = memberFunction(value, INITIAL_VALUE);
+    final Implementation input = memberFunction(value, INPUT);
 
-    return json ->
-        Optional.of(function.apply(json))
+    return (json, vars) ->
+        input != null && initial != null && in != null
+            ? Optional.of(input.apply(json, vars))
+                .filter(JsonUtil::isArray)
+                .map(JsonValue::asJsonArray)
+                .map(
+                    array ->
+                        array.stream()
+                            .reduce(
+                                initial.apply(json, vars),
+                                (result, v) -> reduce(in, result, v).apply(json, vars),
+                                (r1, r2) -> r1))
+                .orElse(NULL)
+            : NULL;
+  }
+
+  private static Implementation reduce(
+      final JsonValue expression, final JsonValue result, final JsonValue value) {
+    return implementation(
+        replaceVariable(replaceVariable(expression, "$$" + THIS, value), VALUE, result));
+  }
+
+  private static JsonValue replaceVariable(
+      final JsonValue expression, final String variable, final JsonValue value) {
+    switch (expression.getValueType()) {
+      case ARRAY:
+        return replaceVariable(expression.asJsonArray(), variable, value);
+      case OBJECT:
+        return replaceVariable(expression.asJsonObject(), variable, value);
+      case STRING:
+        return replaceVariable(asString(expression), variable, value);
+      default:
+        return expression;
+    }
+  }
+
+  private static JsonValue replaceVariable(
+      final JsonString expression, final String variable, final JsonValue value) {
+    return Optional.of(expression.getString())
+        .filter(expr -> expr.startsWith(variable))
+        .map(expr -> value(value, expr.substring(2)))
+        .orElse(expression);
+  }
+
+  private static JsonValue replaceVariable(
+      final JsonArray expressions, final String variable, final JsonValue value) {
+    return toArray(expressions.stream().map(v -> replaceVariable(v, variable, value)));
+  }
+
+  private static JsonValue replaceVariable(
+      final JsonObject expressions, final String variable, final JsonValue value) {
+    return expressions.entrySet().stream()
+        .reduce(
+            createObjectBuilder(),
+            (b, e) -> b.add(e.getKey(), replaceVariable(e.getValue(), variable, value)),
+            (b1, b2) -> b1)
+        .build();
+  }
+
+  static Implementation reverseArray(final JsonValue value) {
+    final Implementation implementation = implementation(value);
+
+    return (json, vars) ->
+        Optional.of(implementation.apply(json, vars))
             .filter(JsonUtil::isArray)
             .map(JsonValue::asJsonArray)
-            .map(array -> (JsonValue) toArray(stream(reverse(array))))
+            .map(array -> toArray(stream(reverse(array))))
             .orElse(NULL);
   }
 
-  static Function<JsonObject, JsonValue> size(final JsonValue value) {
-    final Function<JsonObject, JsonValue> function = function(value);
+  static Implementation size(final JsonValue value) {
+    final Implementation implementation = implementation(value);
 
-    return json ->
-        Optional.of(function.apply(json))
+    return (json, vars) ->
+        Optional.of(implementation.apply(json, vars))
             .filter(JsonUtil::isArray)
             .map(JsonValue::asJsonArray)
             .map(JsonArray::size)
@@ -225,11 +353,12 @@ class Arrays {
             .orElse(NULL);
   }
 
-  static Function<JsonObject, JsonValue> slice(final JsonValue value) {
-    final List<Function<JsonObject, JsonValue>> functions = functions(value);
+  static Implementation slice(final JsonValue value) {
+    final List<Implementation> implementations = implementations(value);
 
-    return json ->
-        applyFunctions(functions, json, fncs -> fncs.size() == 2 || fncs.size() == 3)
+    return (json, vars) ->
+        applyImplementations(
+                implementations, json, vars, fncs -> fncs.size() == 2 || fncs.size() == 3)
             .filter(
                 values ->
                     JsonUtil.isArray(values.get(0))

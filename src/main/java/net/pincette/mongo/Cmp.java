@@ -16,13 +16,11 @@ import static net.pincette.json.JsonUtil.isInstant;
 import static net.pincette.json.JsonUtil.isNumber;
 import static net.pincette.json.JsonUtil.isObject;
 import static net.pincette.json.JsonUtil.isString;
-import static net.pincette.mongo.Expression.applyFunctionsNum;
-import static net.pincette.mongo.Expression.functions;
+import static net.pincette.mongo.Expression.applyImplementationsNum;
+import static net.pincette.mongo.Expression.implementations;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
-import javax.json.JsonObject;
 import javax.json.JsonValue;
 
 /**
@@ -33,11 +31,11 @@ import javax.json.JsonValue;
 class Cmp {
   private Cmp() {}
 
-  static Function<JsonObject, JsonValue> cmp(final JsonValue value) {
-    final List<Function<JsonObject, JsonValue>> functions = functions(value);
+  static Implementation cmp(final JsonValue value) {
+    final List<Implementation> implementations = implementations(value);
 
-    return json ->
-        applyFunctionsNum(functions, json, 2)
+    return (json, vars) ->
+        applyImplementationsNum(implementations, json, vars, 2)
             .map(values -> cmp(values.get(0), values.get(1)))
             .orElse(NULL);
   }

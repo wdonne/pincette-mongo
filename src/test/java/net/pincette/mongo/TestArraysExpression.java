@@ -74,6 +74,26 @@ public class TestArraysExpression {
   }
 
   @Test
+  @DisplayName("$filter")
+  public void filter() {
+    assertEquals(
+        a(v(1), v(2)),
+        function(
+                o(
+                    f(
+                        "$filter",
+                        o(
+                            f("input", a(v(1), v(2), v(0))),
+                            f("as", v("array")),
+                            f("cond", o(f("$gt", a(v("$$array"), v(0)))))))))
+            .apply(o()));
+    assertEquals(
+        a(v(1), v(2)),
+        function(o(f("$filter", o(f("input", a(v(1), v(2), v(0))), f("cond", v("$$this"))))))
+            .apply(o()));
+  }
+
+  @Test
   @DisplayName("$in")
   public void in() {
     assertEquals(
@@ -146,6 +166,44 @@ public class TestArraysExpression {
   }
 
   @Test
+  @DisplayName("$map")
+  public void map() {
+    assertEquals(
+        a(v(2), v(4), v(6)),
+        function(
+                o(
+                    f(
+                        "$map",
+                        o(
+                            f("input", a(v(1), v(2), v(3))),
+                            f("as", v("array")),
+                            f("in", o(f("$multiply", a(v("$$array"), v(2)))))))))
+            .apply(o()));
+    assertEquals(
+        a(v(2), v(3), v(4)),
+        function(
+                o(
+                    f(
+                        "$map",
+                        o(
+                            f("input", a(v(1), v(2), v(3))),
+                            f("in", o(f("$add", a(v("$$this"), v(1)))))))))
+            .apply(o()));
+    assertEquals(
+        a(v(1), v(2), v(3)),
+        function(
+                o(
+                    f(
+                        "$map",
+                        o(
+                            f(
+                                "input",
+                                a(o(f("value", v(1))), o(f("value", v(2))), o(f("value", v(3))))),
+                            f("in", v("$$this.value"))))))
+            .apply(o()));
+  }
+
+  @Test
   @DisplayName("$objectToArray")
   public void objectToArray() {
     assertEquals(
@@ -179,6 +237,51 @@ public class TestArraysExpression {
         a(),
         function(o(f("$range", a(v("$test1"), v("$test2"), v("$test3")))))
             .apply(o(f("test1", v(0)), f("test2", v(10)), f("test3", v(-2)))));
+  }
+
+  @Test
+  @DisplayName("$reduce")
+  public void reduce() {
+    assertEquals(
+        o(f("sum", v(15)), f("product", v(48))),
+        function(
+                o(
+                    f(
+                        "$reduce",
+                        o(
+                            f("input", a(v(1), v(2), v(3), v(4))),
+                            f("initialValue", o(f("sum", v(5)), f("product", v(2)))),
+                            f(
+                                "in",
+                                o(
+                                    f("sum", o(f("$add", a(v("$$value.sum"), v("$$this"))))),
+                                    f(
+                                        "product",
+                                        o(
+                                            f(
+                                                "$multiply",
+                                                a(v("$$value.product"), v("$$this")))))))))))
+            .apply(o()));
+    assertEquals(
+        o(f("sum", v(5)), f("product", v(2))),
+        function(
+                o(
+                    f(
+                        "$reduce",
+                        o(
+                            f("input", a()),
+                            f("initialValue", o(f("sum", v(5)), f("product", v(2)))),
+                            f(
+                                "in",
+                                o(
+                                    f("sum", o(f("$add", a(v("$$value.sum"), v("$$this"))))),
+                                    f(
+                                        "product",
+                                        o(
+                                            f(
+                                                "$multiply",
+                                                a(v("$$value.product"), v("$$this")))))))))))
+            .apply(o()));
   }
 
   @Test
