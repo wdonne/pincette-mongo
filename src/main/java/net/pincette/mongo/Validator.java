@@ -11,11 +11,13 @@ import static javax.json.Json.createObjectBuilder;
 import static javax.json.Json.createReader;
 import static net.pincette.json.JsonUtil.add;
 import static net.pincette.json.JsonUtil.emptyObject;
+import static net.pincette.json.JsonUtil.getArray;
 import static net.pincette.json.JsonUtil.getObjects;
 import static net.pincette.json.JsonUtil.getStrings;
 import static net.pincette.json.JsonUtil.getValue;
 import static net.pincette.json.JsonUtil.isArray;
 import static net.pincette.json.JsonUtil.isObject;
+import static net.pincette.json.JsonUtil.toJsonPointer;
 import static net.pincette.json.Transform.transform;
 import static net.pincette.mongo.Match.predicate;
 import static net.pincette.mongo.Match.predicateValue;
@@ -197,7 +199,9 @@ public class Validator {
 
     return (json, path) ->
         !parentExists(json, path)
-                || (field != null && !isExists && !json.asJsonObject().containsKey(field))
+                || (field != null
+                    && !isExists
+                    && !getValue(json.asJsonObject(), toJsonPointer(field)).isPresent())
                 || test.test(json)
             ? empty()
             : of(createError(path, code));
@@ -260,7 +264,7 @@ public class Validator {
         + tryWith(() -> getField(condition))
             .or(() -> condition.getString(LOCATION, null))
             .get()
-            .map(segment -> "/" + segment)
+            .map(JsonUtil::toJsonPointer)
             .orElse("");
   }
 
@@ -410,7 +414,7 @@ public class Validator {
     final Condition conditions = conditions(null, condition);
 
     return (json, path) ->
-        ofNullable(json.asJsonObject().getJsonArray(field))
+        getArray(json.asJsonObject(), toJsonPointer(field))
             .map(
                 values ->
                     zip(values.stream(), rangeExclusive(0, values.size()))
@@ -425,14 +429,15 @@ public class Validator {
     return (json, path) ->
         (Stream<JsonValue>)
             to(ofNullable(field)
-                    .map(f -> (JsonValue) json.asJsonObject().getJsonObject(f))
+                    .flatMap(f -> getValue(json.asJsonObject(), toJsonPointer(f)))
                     .orElse(json))
                 .apply(j -> c.stream().flatMap(condition -> condition.apply(j, path)));
   }
 
   private Condition generateCondition(final JsonObject condition) {
     return ofNullable(getField(condition))
-        .flatMap(field -> getValue(condition, "/" + field).map(value -> pair(field, value)))
+        .flatMap(
+            field -> getValue(condition, toJsonPointer(field)).map(value -> pair(field, value)))
         .filter(pair -> isConditions(pair.second) || isArray(pair.second))
         .map(
             pair ->

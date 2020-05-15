@@ -519,7 +519,8 @@ public class Expression {
                 + "\n\nVariables:\n"
                 + variables(variables)
                 + "\n\nYields: "
-                + string(result));
+                + string(result)
+                + "\n\n");
 
     return result;
   }

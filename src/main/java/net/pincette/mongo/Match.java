@@ -455,7 +455,8 @@ public class Match {
                 + "\n\nWith:\n"
                 + string(json)
                 + "\n\nYields: "
-                + result);
+                + result
+                + "\n\n");
 
     return result;
   }
