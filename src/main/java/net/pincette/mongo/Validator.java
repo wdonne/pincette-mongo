@@ -6,10 +6,10 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.concat;
 import static java.util.stream.Stream.empty;
 import static java.util.stream.Stream.of;
-import static javax.json.Json.createArrayBuilder;
-import static javax.json.Json.createObjectBuilder;
-import static javax.json.Json.createReader;
 import static net.pincette.json.JsonUtil.add;
+import static net.pincette.json.JsonUtil.createArrayBuilder;
+import static net.pincette.json.JsonUtil.createObjectBuilder;
+import static net.pincette.json.JsonUtil.createReader;
 import static net.pincette.json.JsonUtil.emptyObject;
 import static net.pincette.json.JsonUtil.getArray;
 import static net.pincette.json.JsonUtil.getObjects;
@@ -47,7 +47,6 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
-import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
@@ -208,7 +207,7 @@ public class Validator {
   }
 
   private static JsonObject createError(final String path, final String code) {
-    return create(Json::createObjectBuilder)
+    return create(JsonUtil::createObjectBuilder)
         .update(b -> b.add(ERROR_LOCATION, path))
         .updateIf(() -> ofNullable(code), (b, c) -> b.add(ERROR_CODE, c))
         .build()

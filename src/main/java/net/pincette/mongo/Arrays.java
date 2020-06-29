@@ -2,19 +2,24 @@ package net.pincette.mongo;
 
 import static java.lang.Integer.max;
 import static java.util.stream.Collectors.toList;
-import static javax.json.Json.createArrayBuilder;
-import static javax.json.Json.createObjectBuilder;
-import static javax.json.Json.createValue;
+import static java.util.stream.Collectors.toMap;
 import static javax.json.JsonValue.FALSE;
 import static javax.json.JsonValue.NULL;
 import static javax.json.JsonValue.TRUE;
 import static net.pincette.json.JsonUtil.asArray;
 import static net.pincette.json.JsonUtil.asInt;
 import static net.pincette.json.JsonUtil.asString;
+import static net.pincette.json.JsonUtil.createArrayBuilder;
+import static net.pincette.json.JsonUtil.createObjectBuilder;
+import static net.pincette.json.JsonUtil.createValue;
 import static net.pincette.json.JsonUtil.emptyArray;
+import static net.pincette.json.JsonUtil.getStrings;
+import static net.pincette.json.JsonUtil.getValue;
 import static net.pincette.json.JsonUtil.isInt;
 import static net.pincette.json.JsonUtil.isNumber;
+import static net.pincette.json.JsonUtil.isObject;
 import static net.pincette.json.JsonUtil.isString;
+import static net.pincette.json.JsonUtil.toJsonPointer;
 import static net.pincette.mongo.Expression.applyImplementations;
 import static net.pincette.mongo.Expression.applyImplementationsNum;
 import static net.pincette.mongo.Expression.arraysOperator;
@@ -24,30 +29,39 @@ import static net.pincette.mongo.Expression.implementations;
 import static net.pincette.mongo.Expression.isFalse;
 import static net.pincette.mongo.Expression.member;
 import static net.pincette.mongo.Expression.memberFunction;
-import static net.pincette.mongo.Expression.value;
+import static net.pincette.mongo.Expression.replaceVariables;
 import static net.pincette.mongo.Util.toArray;
+import static net.pincette.util.Collections.map;
 import static net.pincette.util.Collections.reverse;
+import static net.pincette.util.Pair.pair;
 import static net.pincette.util.StreamUtil.rangeExclusive;
 import static net.pincette.util.StreamUtil.rangeInclusive;
 import static net.pincette.util.StreamUtil.stream;
 import static net.pincette.util.StreamUtil.zip;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.IntSupplier;
+import java.util.function.Predicate;
 import javax.json.JsonArray;
+import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
-import javax.json.JsonString;
 import javax.json.JsonValue;
 import net.pincette.json.JsonUtil;
 
 class Arrays {
   private static final String AS = "as";
+  private static final String ASC = "asc";
   private static final String COND = "cond";
+  private static final String DESC = "desc";
+  private static final String DIRECTION = "direction";
   private static final String IN = "in";
   private static final String INITIAL_VALUE = "initialValue";
   private static final String INPUT = "input";
+  private static final String PATHS = "paths";
   private static final String THIS = "this";
   private static final String VALUE = "$$value";
 
@@ -102,12 +116,60 @@ class Arrays {
         .build();
   }
 
+  private static int compare(final JsonValue v1, final JsonValue v2, final List<String> paths) {
+    final BiFunction<JsonValue, String, JsonValue> value =
+        (v, p) -> getValue(v.asJsonObject(), toJsonPointer(p)).orElse(NULL);
+
+    return paths.stream()
+        .map(path -> Cmp.compare(value.apply(v1, path), value.apply(v2, path)))
+        .filter(result -> result != 0)
+        .findFirst()
+        .orElse(0);
+  }
+
   static Implementation concatArrays(final JsonValue value) {
     return arraysOperator(value, Arrays::concatArrays);
   }
 
   private static JsonValue concatArrays(final List<JsonArray> array) {
     return toArray(array.stream().flatMap(JsonArray::stream));
+  }
+
+  static Implementation elemMatch(final JsonValue value) {
+    final Implementation implementation =
+        isElemMatch(value) ? implementation(value.asJsonArray().get(0)) : null;
+    final Map<String, Implementation> conditions =
+        elemMatchConditions(value.asJsonArray().get(1).asJsonObject());
+
+    return (json, vars) ->
+        implementation != null && conditions != null
+            ? Optional.of(implementation.apply(json, vars))
+                .filter(JsonUtil::isArray)
+                .map(JsonValue::asJsonArray)
+                .flatMap(
+                    array ->
+                        Optional.of(elemMatchPredicate(json, vars, conditions))
+                            .flatMap(predicate -> array.stream().filter(predicate).findFirst()))
+                .orElse(NULL)
+            : NULL;
+  }
+
+  private static Map<String, Implementation> elemMatchConditions(final JsonObject expression) {
+    return expression.entrySet().stream()
+        .collect(toMap(Entry::getKey, e -> implementation(e.getValue())));
+  }
+
+  private static Predicate<JsonValue> elemMatchPredicate(
+      final JsonObject json,
+      final Map<String, JsonValue> variables,
+      final Map<String, Implementation> conditions) {
+    return Match.elemMatchPredicate(
+        conditions.entrySet().stream()
+            .reduce(
+                createObjectBuilder(),
+                (b, e) -> b.add(e.getKey(), e.getValue().apply(json, variables)),
+                (b1, b2) -> b1)
+            .build());
   }
 
   static Implementation filter(final JsonValue value) {
@@ -171,6 +233,12 @@ class Arrays {
             .orElse(FALSE);
   }
 
+  private static boolean isElemMatch(final JsonValue value) {
+    return JsonUtil.isArray(value)
+        && value.asJsonArray().size() == 2
+        && isObject(value.asJsonArray().get(1));
+  }
+
   private static boolean isKV(final JsonValue value) {
     return Optional.of(value)
         .filter(JsonUtil::isObject)
@@ -217,7 +285,7 @@ class Arrays {
   private static List<Implementation> mapper(
       final JsonArray values, final String variable, final JsonValue expression) {
     return values.stream()
-        .map(v -> implementation(replaceVariable(expression, variable, v)))
+        .map(v -> implementation(replaceVariables(expression, map(pair(variable, v)))))
         .collect(toList());
   }
 
@@ -263,7 +331,7 @@ class Arrays {
 
     return start <= end && step < 0 || start >= end && step > 0
         ? emptyArray()
-        : JsonUtil.createValue(rangeExclusive(start, end, Math.abs(step)));
+        : createValue(rangeExclusive(start, end, Math.abs(step)));
   }
 
   static Implementation reduce(final JsonValue value) {
@@ -290,44 +358,8 @@ class Arrays {
   private static Implementation reduce(
       final JsonValue expression, final JsonValue result, final JsonValue value) {
     return implementation(
-        replaceVariable(replaceVariable(expression, "$$" + THIS, value), VALUE, result));
-  }
-
-  private static JsonValue replaceVariable(
-      final JsonValue expression, final String variable, final JsonValue value) {
-    switch (expression.getValueType()) {
-      case ARRAY:
-        return replaceVariable(expression.asJsonArray(), variable, value);
-      case OBJECT:
-        return replaceVariable(expression.asJsonObject(), variable, value);
-      case STRING:
-        return replaceVariable(asString(expression), variable, value);
-      default:
-        return expression;
-    }
-  }
-
-  private static JsonValue replaceVariable(
-      final JsonString expression, final String variable, final JsonValue value) {
-    return Optional.of(expression.getString())
-        .filter(expr -> expr.startsWith(variable))
-        .map(expr -> value(value, expr.substring(2)))
-        .orElse(expression);
-  }
-
-  private static JsonValue replaceVariable(
-      final JsonArray expressions, final String variable, final JsonValue value) {
-    return toArray(expressions.stream().map(v -> replaceVariable(v, variable, value)));
-  }
-
-  private static JsonValue replaceVariable(
-      final JsonObject expressions, final String variable, final JsonValue value) {
-    return expressions.entrySet().stream()
-        .reduce(
-            createObjectBuilder(),
-            (b, e) -> b.add(e.getKey(), replaceVariable(e.getValue(), variable, value)),
-            (b1, b2) -> b1)
-        .build();
+        replaceVariables(
+            replaceVariables(expression, map(pair("$$" + THIS, value))), map(pair(VALUE, result))));
   }
 
   static Implementation reverseArray(final JsonValue value) {
@@ -392,6 +424,40 @@ class Arrays {
                 .orElseGet(() -> max(0, asArray(values.get(0)).size() + asInt(values.get(1))));
 
     return values.size() == 2 ? defaultPosition.getAsInt() : setPosition.getAsInt();
+  }
+
+  static Implementation sort(final JsonValue value) {
+    final Optional<JsonObject> object =
+        Optional.of(value).filter(JsonUtil::isObject).map(JsonValue::asJsonObject);
+    final String direction =
+        object
+            .map(json -> json.getString(DIRECTION, null))
+            .filter(dir -> dir.equals(ASC) || dir.equals(DESC))
+            .orElse(ASC);
+    final List<String> paths =
+        object.map(json -> getStrings(json, PATHS).collect(toList())).orElse(null);
+    final Implementation input = memberFunction(value, INPUT);
+
+    return (json, vars) ->
+        input != null
+            ? Optional.of(input.apply(json, vars))
+                .filter(JsonUtil::isArray)
+                .map(JsonValue::asJsonArray)
+                .map(array -> sort(array, paths, direction))
+                .orElse(NULL)
+            : NULL;
+  }
+
+  private static JsonValue sort(
+      final JsonArray array, final List<String> paths, final String direction) {
+    return array.stream()
+        .filter(v -> paths == null || paths.isEmpty() || isObject(v))
+        .sorted(
+            (v1, v2) ->
+                (paths != null && !paths.isEmpty() ? compare(v1, v2, paths) : Cmp.compare(v1, v2))
+                    * (direction.equals(ASC) ? 1 : -1))
+        .reduce(createArrayBuilder(), JsonArrayBuilder::add, (b1, b2) -> b1)
+        .build();
   }
 
   private static boolean withinRange(final JsonArray array, final int index) {

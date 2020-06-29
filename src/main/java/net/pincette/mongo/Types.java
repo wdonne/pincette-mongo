@@ -2,8 +2,6 @@ package net.pincette.mongo;
 
 import static java.math.BigDecimal.ZERO;
 import static java.util.Optional.ofNullable;
-import static javax.json.Json.createObjectBuilder;
-import static javax.json.Json.createValue;
 import static javax.json.JsonValue.FALSE;
 import static javax.json.JsonValue.NULL;
 import static javax.json.JsonValue.TRUE;
@@ -12,6 +10,8 @@ import static net.pincette.json.JsonUtil.asInt;
 import static net.pincette.json.JsonUtil.asLong;
 import static net.pincette.json.JsonUtil.asNumber;
 import static net.pincette.json.JsonUtil.asString;
+import static net.pincette.json.JsonUtil.createObjectBuilder;
+import static net.pincette.json.JsonUtil.createValue;
 import static net.pincette.json.JsonUtil.isDouble;
 import static net.pincette.json.JsonUtil.isInstant;
 import static net.pincette.json.JsonUtil.isInt;

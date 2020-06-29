@@ -3,7 +3,7 @@ package net.pincette.mongo;
 import static java.util.Collections.emptyMap;
 import static java.util.Optional.ofNullable;
 import static java.util.logging.Level.FINEST;
-import static java.util.logging.Logger.getLogger;
+import static java.util.logging.Level.INFO;
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
 import static java.util.regex.Pattern.COMMENTS;
 import static java.util.regex.Pattern.DOTALL;
@@ -38,6 +38,8 @@ import static net.pincette.mongo.Cmp.compareStrings;
 import static net.pincette.mongo.Expression.function;
 import static net.pincette.mongo.Expression.isFalse;
 import static net.pincette.mongo.Util.key;
+import static net.pincette.mongo.Util.logger;
+import static net.pincette.mongo.Util.unwrapTrace;
 import static net.pincette.util.Collections.map;
 import static net.pincette.util.Collections.merge;
 import static net.pincette.util.Collections.set;
@@ -56,6 +58,7 @@ import java.util.function.Function;
 import java.util.function.IntSupplier;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import javax.json.JsonArray;
@@ -75,6 +78,9 @@ import org.bson.conversions.Bson;
  * <code>$where</code> and the geospatial operators. The operator <code>$expr</code> should contain
  * only expressions which yield a boolean or aggregation expressions. The operator <code>$all</code>
  * doesn't work with the <code>$elemMatch</code> operator.
+ *
+ * <p>If you wrap an expression in the <code>$trace</code> operator then tracing will be done for it
+ * in the logger "net.pincette.mongo.expressions" at level <code>INFO</code>.
  *
  * @see Expression
  * @author Werner Donn\u00e9
@@ -120,7 +126,6 @@ public class Match {
   private static final Set<String> COMBINERS = set(AND, EXPR, NOR, OR);
   private static final Set<String> SUPPORTED_TYPES =
       set(ARRAY, BOOL, DATE, DECIMAL, DOUBLE, INT, LONG, NULL_TYPE, OBJECT, STRING, TIMESTAMP);
-  private static final Logger logger = getLogger("net.pincette.mongo.expressions");
   private static Map<String, QueryOperator> queryOps;
   private static final Map<String, QueryOperator> QUERY_OPERATORS =
       map(
@@ -249,19 +254,22 @@ public class Match {
   }
 
   private static Predicate<JsonValue> elemMatch(final JsonValue value) {
-    final Predicate<JsonValue> predicate =
-        Optional.of(value)
-            .filter(JsonUtil::isObject)
-            .map(JsonValue::asJsonObject)
-            .map(JsonObject::entrySet)
-            .flatMap(
-                entries ->
-                    entries.stream()
-                        .map(entry -> elemMatchPredicate(entry.getKey(), entry.getValue()))
-                        .reduce((p1, p2) -> (v -> p1.test(v) && p2.test(v))))
-            .orElseGet(Match::falsePredicate);
+    final Predicate<JsonValue> predicate = elemMatchPredicate(value);
 
     return v -> v != null && isArray(v) && asArray(v).stream().anyMatch(predicate);
+  }
+
+  static Predicate<JsonValue> elemMatchPredicate(final JsonValue value) {
+    return Optional.of(value)
+        .filter(JsonUtil::isObject)
+        .map(JsonValue::asJsonObject)
+        .map(JsonObject::entrySet)
+        .flatMap(
+            entries ->
+                entries.stream()
+                    .map(entry -> elemMatchPredicate(entry.getKey(), entry.getValue()))
+                    .reduce((p1, p2) -> (v -> p1.test(v) && p2.test(v))))
+        .orElseGet(Match::falsePredicate);
   }
 
   private static Predicate<JsonValue> elemMatchPredicate(final String key, final JsonValue value) {
@@ -446,9 +454,9 @@ public class Match {
   }
 
   private static boolean log(
-      final JsonObject expression, final JsonObject json, final boolean result) {
+      final JsonObject expression, final JsonObject json, final boolean result, final Level level) {
     logger.log(
-        FINEST,
+        level,
         () ->
             "Expression:\n"
                 + string(expression)
@@ -591,17 +599,19 @@ public class Match {
    * @since 1.2
    */
   public static Predicate<JsonObject> predicate(final JsonObject expression) {
-    final Function<String, JsonValue> value = key -> expression.getValue("/" + key);
+    final Pair<JsonObject, Boolean> unwrapped = unwrapTrace(expression);
+    final Function<String, JsonValue> value = key -> unwrapped.first.getValue("/" + key);
 
     return wrapLogging(
-        key(expression)
+        key(unwrapped.first)
             .map(
                 key ->
                     COMBINERS.contains(key)
                         ? predicateCombiner(key, value.apply(key))
                         : predicateField(key, value.apply(key)))
             .orElse(json -> false),
-        expression);
+        unwrapped.first,
+        Boolean.TRUE.equals(unwrapped.second) ? INFO : FINEST);
   }
 
   /**
@@ -713,10 +723,10 @@ public class Match {
   }
 
   private static Predicate<JsonObject> wrapLogging(
-      final Predicate<JsonObject> predicate, final JsonObject expression) {
+      final Predicate<JsonObject> predicate, final JsonObject expression, final Level level) {
     return json ->
         Optional.of(predicate.test(json))
-            .map(result -> log(expression, json, result))
+            .map(result -> log(expression, json, result, level))
             .orElse(false);
   }
 }

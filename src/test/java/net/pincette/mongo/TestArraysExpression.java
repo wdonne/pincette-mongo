@@ -74,6 +74,13 @@ public class TestArraysExpression {
   }
 
   @Test
+  @DisplayName("$elemMatch")
+  public void elemMatch() {
+    assertEquals(
+        v(1), function(o(f("$elemMatch", a(a(v(0), v(1)), o(f("$gt", v(0))))))).apply(o()));
+  }
+
+  @Test
   @DisplayName("$filter")
   public void filter() {
     assertEquals(
@@ -332,6 +339,32 @@ public class TestArraysExpression {
         a(v(0), v(1), v(2)),
         function(o(f("$slice", a(v("$test1"), v("$test2"), v("$test3")))))
             .apply(o(f("test1", a(v(0), v(1), v(2))), f("test2", v(-10)), f("test3", v(3)))));
+  }
+
+  @Test
+  @DisplayName("$sort")
+  public void sort() {
+    assertEquals(
+        a(v(0), v(1), v(2)),
+        function(o(f("$sort", o(f("input", a(v(1), v(2), v(0))))))).apply(o()));
+    assertEquals(
+        a(v(2), v(1), v(0)),
+        function(o(f("$sort", o(f("input", a(v(1), v(2), v(0))), f("direction", v("desc"))))))
+            .apply(o()));
+    assertEquals(
+        a(
+            o(f("f1", v(0)), f("f2", v(0))),
+            o(f("f1", v(0)), f("f2", v(1))),
+            o(f("f1", v(1)), f("f2", v(0)))),
+        function(o(f("$sort", o(f("input", v("$test")), f("paths", a(v("f1"), v("f2")))))))
+            .apply(
+                o(
+                    f(
+                        "test",
+                        a(
+                            o(f("f1", v(0)), f("f2", v(1))),
+                            o(f("f1", v(0)), f("f2", v(0))),
+                            o(f("f1", v(1)), f("f2", v(0))))))));
   }
 
   @Test

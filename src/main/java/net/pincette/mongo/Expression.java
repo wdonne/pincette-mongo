@@ -4,20 +4,19 @@ import static java.time.Instant.now;
 import static java.util.Collections.emptyMap;
 import static java.util.Optional.ofNullable;
 import static java.util.logging.Level.FINEST;
-import static java.util.logging.Logger.getLogger;
+import static java.util.logging.Level.INFO;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
-import static javax.json.Json.createArrayBuilder;
-import static javax.json.Json.createObjectBuilder;
-import static javax.json.Json.createValue;
 import static javax.json.JsonValue.FALSE;
 import static javax.json.JsonValue.NULL;
-import static net.pincette.json.Jslt.transformer;
 import static net.pincette.json.JsonUtil.asInt;
 import static net.pincette.json.JsonUtil.asNumber;
 import static net.pincette.json.JsonUtil.asString;
 import static net.pincette.json.JsonUtil.copy;
+import static net.pincette.json.JsonUtil.createArrayBuilder;
+import static net.pincette.json.JsonUtil.createObjectBuilder;
+import static net.pincette.json.JsonUtil.createValue;
 import static net.pincette.json.JsonUtil.getValue;
 import static net.pincette.json.JsonUtil.isArray;
 import static net.pincette.json.JsonUtil.isNumber;
@@ -28,12 +27,13 @@ import static net.pincette.mongo.BsonUtil.fromBson;
 import static net.pincette.mongo.BsonUtil.toBsonDocument;
 import static net.pincette.mongo.Relational.asFunction;
 import static net.pincette.mongo.Util.key;
+import static net.pincette.mongo.Util.logger;
 import static net.pincette.mongo.Util.toArray;
+import static net.pincette.mongo.Util.unwrapTrace;
 import static net.pincette.util.Collections.map;
 import static net.pincette.util.Collections.merge;
 import static net.pincette.util.Pair.pair;
 
-import java.io.File;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
@@ -47,6 +47,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.json.JsonArray;
 import javax.json.JsonNumber;
@@ -54,6 +55,7 @@ import javax.json.JsonObject;
 import javax.json.JsonString;
 import javax.json.JsonStructure;
 import javax.json.JsonValue;
+import net.pincette.json.Jslt;
 import net.pincette.json.JsonUtil;
 import net.pincette.util.Or;
 import net.pincette.util.Pair;
@@ -65,15 +67,33 @@ import org.bson.conversions.Bson;
  * expression</a> to a JSON object. The only supported variable is <code>$$NOW</code>. The following
  * operators are not supported: <code>$indexOfBytes</code>, <code>$strLenBytes</code>, <code>
  * $substrBytes</code>, <code>$toDate</code>, <code>$toObjectId</code> and the date expression
- * operators. Accumulators are also not supported. Only the aggregation variable <code>
- * $$NOW</code> is supported.
+ * operators. Accumulators are also not supported. Only the aggregation variables <code>
+ * $$NOW</code> and <code>$$ROOT</code> are supported.
  *
- * <p>There are two extensions. The <code>$unescape</code> operator converts key names that start
- * with "#$" to "$". This way an expression can be escaped from implementation generation. The other
- * extension is <code>$jslt</code>. Its expression should be an object with the mandatory fields
- * <code>input</code> and <code>script</code>. The former is an expression that should produce a
- * JSON object. The latter is a reference to a JSLT script. If the value starts with "resource:"
- * then it is treated as a resource in the class path. Otherwise it is a filename.
+ * <p>The <code>$unescape</code> extension operator converts key names that start with "#$" to "$".
+ * This way an expression can be escaped from implementation generation.
+ *
+ * <p>The expression of the <code>$jslt</code> extension operator should be an object with the
+ * mandatory fields <code>input</code> and <code>script</code>. The former is an expression that
+ * should produce a JSON object. The latter is a reference to a JSLT script. If the value starts
+ * with "resource:" then it is treated as a resource in the class path. Otherwise it is a filename.
+ *
+ * <p>The <code>$sort</code> extension operator receives an object with the mandatory field <code>
+ * input</code>, which should be an expression that yields an array. The optional field <code>
+ * direction</code> can have the values "asc" or "desc", the former being the default. The optional
+ * field <code>paths</code> is a list of field paths. When it is present only object values in the
+ * array are considered. They will be sorted hierarchically with the values extracted with the
+ * paths.
+ *
+ * <p>The operator <code>$elemMatch</code>, which is normally part of the MongoDB query language, is
+ * available in another form. Its value must be an array with two elements. The first element is an
+ * expression that yields an array and the second is an <code>$elemMatch</code> specification. If
+ * behaves as the <a
+ * href="https://docs.mongodb.com/manual/reference/operator/projection/elemMatch/">projection
+ * variant</a> of the operator.
+ *
+ * <p>If you wrap an expression in the <code>$trace</code> operator then tracing will be done for it
+ * in the logger "net.pincette.mongo.expressions" at level <code>INFO</code>.
  *
  * @author Werner Donn\u00e9
  * @since 1.2
@@ -102,6 +122,7 @@ public class Expression {
   private static final String COS = "$cos";
   private static final String DEGREES_TO_RADIANS = "$degreesToRadians";
   private static final String DIVIDE = "$divide";
+  private static final String ELEM_MATCH = "$elemMatch";
   private static final String EQ = "$eq";
   private static final String EXP = "$exp";
   private static final String FILTER = "$filter";
@@ -133,6 +154,7 @@ public class Expression {
   private static final String NOW = "$$NOW";
   private static final String OBJECT_TO_ARRAY = "$objectToArray";
   private static final String OR = "$or";
+  private static final String SORT = "$sort";
   private static final String POW = "$pow";
   private static final String RADIANS_TO_DEGREES = "$radiansToDegrees";
   private static final String RANGE = "$range";
@@ -140,8 +162,8 @@ public class Expression {
   private static final String REGEX_FIND = "$regexFind";
   private static final String REGEX_FIND_ALL = "$regexFindAll";
   private static final String REGEX_MATCH = "$regexMatch";
-  private static final String RESOURCE = "resource:";
   private static final String REVERSE_ARRAY = "$reverseArray";
+  private static final String ROOT = "$$ROOT";
   private static final String ROUND = "$round";
   private static final String RTRIM = "$rtrim";
   private static final String SCRIPT = "script";
@@ -198,6 +220,7 @@ public class Expression {
           pair(ARRAY_ELEM_AT, Arrays::arrayElemAt),
           pair(ARRAY_TO_OBJECT, Arrays::arrayToObject),
           pair(CONCAT_ARRAYS, Arrays::concatArrays),
+          pair(ELEM_MATCH, Arrays::elemMatch),
           pair(FILTER, Arrays::filter),
           pair(IN, Arrays::in),
           pair(INDEX_OF_ARRAY, Arrays::indexOfArray),
@@ -208,7 +231,8 @@ public class Expression {
           pair(REDUCE, Arrays::reduce),
           pair(REVERSE_ARRAY, Arrays::reverseArray),
           pair(SIZE, Arrays::size),
-          pair(SLICE, Arrays::slice));
+          pair(SLICE, Arrays::slice),
+          pair(SORT, Arrays::sort));
   private static final Map<String, Operator> BOOLEANS =
       map(pair(AND, Booleans::and), pair(NOT, Booleans::not), pair(OR, Booleans::or));
   private static final Map<String, Operator> CONDITIONAL =
@@ -292,7 +316,6 @@ public class Expression {
               pair(MERGE_OBJECTS, Expression::mergeObjects),
               pair(UNESCAPE, Expression::unescape),
               pair(ZIP, Zip::zip)));
-  private static final Logger logger = getLogger("net.pincette.mongo.expressions");
   private static Map<String, Operator> ops = OPERATORS;
 
   private Expression() {}
@@ -418,6 +441,16 @@ public class Expression {
     return asString(values.get(index)).getString();
   }
 
+  private static Optional<JsonValue> getVariable(
+      final Map<String, JsonValue> variables, final String name) {
+    return ofNullable(
+        variables.get(
+            Optional.of(name.indexOf('.'))
+                .filter(i -> i != -1)
+                .map(i -> name.substring(0, i))
+                .orElse(name)));
+  }
+
   private static Optional<Implementation> implementation(final String key, final JsonValue value) {
     return ofNullable(ops.get(key)).map(fn -> fn.apply(value));
   }
@@ -430,12 +463,17 @@ public class Expression {
    * @since 1.3
    */
   public static Implementation implementation(final JsonValue expression) {
+    final Pair<JsonValue, Boolean> unwrapped = unwrapTrace(expression);
     final Supplier<Implementation> tryArray =
-        () -> isArray(expression) ? implementation(expression.asJsonArray()) : value(expression);
+        () ->
+            isArray(unwrapped.first)
+                ? implementation(unwrapped.first.asJsonArray())
+                : value(unwrapped.first);
 
     return wrapLogging(
-        isObject(expression) ? implementation(expression.asJsonObject()) : tryArray.get(),
-        expression);
+        isObject(unwrapped.first) ? implementation(unwrapped.first.asJsonObject()) : tryArray.get(),
+        unwrapped.first,
+        Boolean.TRUE.equals(unwrapped.second) ? INFO : FINEST);
   }
 
   private static Implementation implementation(final JsonObject expression) {
@@ -473,13 +511,7 @@ public class Expression {
   private static Implementation jslt(final JsonValue value) {
     final Implementation input = memberFunction(value, INPUT);
     final UnaryOperator<JsonObject> script =
-        member(value, SCRIPT, v -> asString(v).getString())
-            .map(
-                s ->
-                    s.startsWith(RESOURCE)
-                        ? transformer(s.substring(RESOURCE.length()))
-                        : transformer(new File(s)))
-            .orElse(null);
+        member(value, SCRIPT, v -> asString(v).getString()).map(Jslt::tryTransformer).orElse(null);
 
     return (json, vars) ->
         input != null && script != null
@@ -508,9 +540,10 @@ public class Expression {
       final JsonValue expression,
       final JsonObject json,
       final Map<String, JsonValue> variables,
-      final JsonValue result) {
+      final JsonValue result,
+      final Level level) {
     logger.log(
-        FINEST,
+        level,
         () ->
             "Expression:\n"
                 + string(expression)
@@ -704,6 +737,51 @@ public class Expression {
     ops = merge(ops, extensions);
   }
 
+  /**
+   * Replaces all <code>variables</code> in <code>expression</code>. Variable names start with "$$".
+   *
+   * @param expression the given expression.
+   * @param variables maps variable names to JSON values.
+   * @return The new expression.
+   * @since 1.3.2
+   */
+  public static JsonValue replaceVariables(
+      final JsonValue expression, final Map<String, JsonValue> variables) {
+    switch (expression.getValueType()) {
+      case ARRAY:
+        return replaceVariables(expression.asJsonArray(), variables);
+      case OBJECT:
+        return replaceVariables(expression.asJsonObject(), variables);
+      case STRING:
+        return replaceVariables(asString(expression), variables);
+      default:
+        return expression;
+    }
+  }
+
+  private static JsonValue replaceVariables(
+      final JsonString expression, final Map<String, JsonValue> variables) {
+    return Optional.of(expression.getString())
+        .flatMap(expr -> getVariable(variables, expr).map(value -> pair(expr, value)))
+        .map(pair -> value(pair.second, pair.first.substring(2)))
+        .orElse(expression);
+  }
+
+  private static JsonValue replaceVariables(
+      final JsonArray expressions, final Map<String, JsonValue> variables) {
+    return toArray(expressions.stream().map(v -> replaceVariables(v, variables)));
+  }
+
+  private static JsonValue replaceVariables(
+      final JsonObject expressions, final Map<String, JsonValue> variables) {
+    return expressions.entrySet().stream()
+        .reduce(
+            createObjectBuilder(),
+            (b, e) -> b.add(e.getKey(), replaceVariables(e.getValue(), variables)),
+            (b1, b2) -> b1)
+        .build();
+  }
+
   static Implementation stringsOperator(
       final JsonValue value, final Function<List<String>, JsonValue> op) {
     return multipleOperator(value, op, JsonUtil::isString, v -> asString(v).getString());
@@ -758,18 +836,21 @@ public class Expression {
             .filter(JsonUtil::isString)
             .map(JsonUtil::asString)
             .map(JsonString::getString)
-            .flatMap(
-                s ->
-                    Or.<JsonValue>tryWith(
-                            () -> s.equals(NOW) ? createValue(now().toString()) : null)
-                        .or(() -> s.startsWith("$$") ? value(variables, s.substring(2)) : null)
-                        .or(
-                            () ->
-                                s.startsWith("$")
-                                    ? getValue(json, toJsonPointer(s.substring(1))).orElse(NULL)
-                                    : null)
-                        .get())
+            .flatMap(s -> value(json, s, variables))
             .orElse(value);
+  }
+
+  private static Optional<JsonValue> value(
+      final JsonObject json, final String value, final Map<String, JsonValue> variables) {
+    return Or.<JsonValue>tryWith(() -> value.equals(NOW) ? createValue(now().toString()) : null)
+        .or(() -> value.equals(ROOT) ? json : null)
+        .or(() -> value.startsWith("$$") ? value(variables, value.substring(2)) : null)
+        .or(
+            () ->
+                value.startsWith("$")
+                    ? getValue(json, toJsonPointer(value.substring(1))).orElse(NULL)
+                    : null)
+        .get();
   }
 
   private static JsonValue value(final Map<String, JsonValue> variables, final String variable) {
@@ -818,10 +899,10 @@ public class Expression {
   }
 
   private static Implementation wrapLogging(
-      final Implementation implementation, final JsonValue expression) {
+      final Implementation implementation, final JsonValue expression, final Level level) {
     return (json, vars) ->
         Optional.of(implementation.apply(json, vars))
-            .map(result -> log(expression, json, vars, result))
+            .map(result -> log(expression, json, vars, result, level))
             .orElse(null);
   }
 }

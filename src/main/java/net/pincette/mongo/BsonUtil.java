@@ -4,14 +4,14 @@ import static java.time.Instant.ofEpochMilli;
 import static java.time.Instant.ofEpochSecond;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
-import static javax.json.Json.createArrayBuilder;
-import static javax.json.Json.createObjectBuilder;
-import static javax.json.Json.createValue;
 import static javax.json.JsonValue.FALSE;
 import static javax.json.JsonValue.NULL;
 import static javax.json.JsonValue.TRUE;
 import static net.pincette.json.JsonUtil.asNumber;
 import static net.pincette.json.JsonUtil.asString;
+import static net.pincette.json.JsonUtil.createArrayBuilder;
+import static net.pincette.json.JsonUtil.createObjectBuilder;
+import static net.pincette.json.JsonUtil.createValue;
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 
 import java.util.Map;
@@ -99,19 +99,19 @@ public class BsonUtil {
   }
 
   public static JsonNumber fromBson(final BsonInt32 bson) {
-    return createValue(bson.getValue());
+    return asNumber(createValue(bson.getValue()));
   }
 
   public static JsonNumber fromBson(final BsonInt64 bson) {
-    return createValue(bson.getValue());
+    return asNumber(createValue(bson.getValue()));
   }
 
   public static JsonNumber fromBson(final BsonDouble bson) {
-    return createValue(bson.getValue());
+    return asNumber(createValue(bson.getValue()));
   }
 
   public static JsonString fromBson(final BsonDateTime bson) {
-    return createValue(ofEpochMilli(bson.getValue()).toString());
+    return asString(createValue(ofEpochMilli(bson.getValue()).toString()));
   }
 
   public static JsonObject fromBson(final BsonRegularExpression bson) {
@@ -122,11 +122,11 @@ public class BsonUtil {
   }
 
   public static JsonString fromBson(final BsonString bson) {
-    return createValue(bson.getValue());
+    return asString(createValue(bson.getValue()));
   }
 
   public static JsonString fromBson(final BsonTimestamp bson) {
-    return createValue(ofEpochSecond(bson.getTime()).toString());
+    return asString(createValue(ofEpochSecond(bson.getTime()).toString()));
   }
 
   public static BsonValue fromJson(final JsonValue json) {

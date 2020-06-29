@@ -1,26 +1,18 @@
 package net.pincette.mongo;
 
-import static java.lang.Integer.MAX_VALUE;
-import static java.lang.Integer.min;
-import static java.lang.Math.abs;
-import static javax.json.Json.createValue;
 import static javax.json.JsonValue.FALSE;
 import static javax.json.JsonValue.NULL;
 import static javax.json.JsonValue.TRUE;
 import static net.pincette.json.JsonUtil.asNumber;
 import static net.pincette.json.JsonUtil.asString;
-import static net.pincette.json.JsonUtil.isArray;
+import static net.pincette.json.JsonUtil.createValue;
 import static net.pincette.json.JsonUtil.isBoolean;
-import static net.pincette.json.JsonUtil.isDate;
-import static net.pincette.json.JsonUtil.isInstant;
 import static net.pincette.json.JsonUtil.isNumber;
-import static net.pincette.json.JsonUtil.isObject;
 import static net.pincette.json.JsonUtil.isString;
 import static net.pincette.mongo.Expression.applyImplementationsNum;
 import static net.pincette.mongo.Expression.implementations;
 
 import java.util.List;
-import java.util.Optional;
 import javax.json.JsonValue;
 
 /**
@@ -41,11 +33,7 @@ class Cmp {
   }
 
   private static JsonValue cmp(final JsonValue v1, final JsonValue v2) {
-    return createValue(
-        normalize(
-            Optional.of(typeValue(v1) - typeValue(v2))
-                .filter(result -> result != 0)
-                .orElseGet(() -> compare(v1, v2))));
+    return createValue(Util.compare(v1, v2));
   }
 
   static boolean comparable(final JsonValue v1, final JsonValue v2) {
@@ -55,9 +43,15 @@ class Cmp {
   }
 
   static int compare(final JsonValue v1, final JsonValue v2) {
+    if (v2.equals(NULL)) {
+      return 1;
+    }
+
     switch (v1.getValueType()) {
       case FALSE:
         return v2.equals(FALSE) ? 0 : -1;
+      case NULL:
+        return -1;
       case NUMBER:
         return compareNumbers(v1, v2);
       case STRING:
@@ -75,45 +69,5 @@ class Cmp {
 
   static int compareStrings(final JsonValue v1, final JsonValue v2) {
     return asString(v1).getString().compareTo(asString(v2).getString());
-  }
-
-  static int normalize(final int result) {
-    return min(1, abs(result)) * (result < 0 ? -1 : 1);
-  }
-
-  private static int typeValue(final JsonValue value) {
-    if (value.equals(NULL)) {
-      return 2;
-    }
-
-    if (isNumber(value)) {
-      return 3;
-    }
-
-    if (isString(value) && !isDate(value) && !isInstant(value)) {
-      return 4;
-    }
-
-    if (isObject(value)) {
-      return 5;
-    }
-
-    if (isArray(value)) {
-      return 6;
-    }
-
-    if (value.equals(TRUE) || value.equals(FALSE)) {
-      return 9;
-    }
-
-    if (isDate(value)) {
-      return 10;
-    }
-
-    if (isInstant(value)) {
-      return 11;
-    }
-
-    return MAX_VALUE;
   }
 }

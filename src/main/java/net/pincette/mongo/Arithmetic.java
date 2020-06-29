@@ -2,11 +2,11 @@ package net.pincette.mongo;
 
 import static java.time.Duration.between;
 import static java.util.stream.Collectors.toList;
-import static javax.json.Json.createValue;
 import static javax.json.JsonValue.NULL;
 import static net.pincette.json.JsonUtil.asInstant;
 import static net.pincette.json.JsonUtil.asLong;
 import static net.pincette.json.JsonUtil.asNumber;
+import static net.pincette.json.JsonUtil.createValue;
 import static net.pincette.json.JsonUtil.isInstant;
 import static net.pincette.json.JsonUtil.isLong;
 import static net.pincette.json.JsonUtil.isNumber;

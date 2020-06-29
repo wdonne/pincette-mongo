@@ -6,14 +6,13 @@ import static java.lang.String.join;
 import static java.util.Arrays.stream;
 import static java.util.regex.Pattern.quote;
 import static java.util.stream.Stream.empty;
-import static javax.json.Json.createObjectBuilder;
-import static javax.json.Json.createValue;
 import static javax.json.JsonValue.NULL;
 import static net.pincette.json.JsonUtil.asInt;
 import static net.pincette.json.JsonUtil.asString;
+import static net.pincette.json.JsonUtil.createObjectBuilder;
+import static net.pincette.json.JsonUtil.createValue;
 import static net.pincette.json.JsonUtil.isNumber;
 import static net.pincette.json.JsonUtil.isString;
-import static net.pincette.mongo.Cmp.normalize;
 import static net.pincette.mongo.Expression.applyImplementations;
 import static net.pincette.mongo.Expression.applyImplementationsNum;
 import static net.pincette.mongo.Expression.getInteger;
@@ -23,6 +22,7 @@ import static net.pincette.mongo.Expression.implementations;
 import static net.pincette.mongo.Expression.memberFunction;
 import static net.pincette.mongo.Expression.stringsOperator;
 import static net.pincette.mongo.Match.compileRegex;
+import static net.pincette.mongo.Util.normalize;
 import static net.pincette.mongo.Util.toArray;
 import static net.pincette.util.Collections.list;
 import static net.pincette.util.StreamUtil.rangeInclusive;
@@ -34,7 +34,6 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.stream.Stream;
-import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.JsonString;
 import javax.json.JsonValue;
@@ -55,7 +54,7 @@ class Strings {
     return createObjectBuilder()
         .add(MATCH, matcher.group())
         .add(IDX, matcher.start())
-        .add(CAPTURES, toArray(groups(matcher).map(Json::createValue)))
+        .add(CAPTURES, toArray(groups(matcher).map(JsonUtil::createValue)))
         .build();
   }
 
@@ -152,7 +151,7 @@ class Strings {
   }
 
   static Implementation regexMatch(final JsonValue value) {
-    return regex(value, matcher -> JsonUtil.createValue(matcher.find()));
+    return regex(value, matcher -> createValue(matcher.find()));
   }
 
   static Implementation rtrim(final JsonValue value) {
@@ -168,7 +167,7 @@ class Strings {
   }
 
   private static JsonValue split(final String s, final String delimiter) {
-    return toArray(stream(s.split(quote(delimiter))).map(Json::createValue));
+    return toArray(stream(s.split(quote(delimiter))).map(JsonUtil::createValue));
   }
 
   static Implementation strLenCP(final JsonValue value) {
@@ -261,7 +260,7 @@ class Strings {
                     isString(values.get(0)) && (values.get(1) == null || isString(values.get(1))))
             .map(
                 values ->
-                    JsonUtil.createValue(
+                    createValue(
                         trim(
                             getString(values, 0),
                             values.get(1) != null ? getString(values, 1) : null,

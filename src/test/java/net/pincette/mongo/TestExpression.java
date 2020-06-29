@@ -13,17 +13,23 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 public class TestExpression {
-  @Test
-  @DisplayName("$jslt")
-  public void jslt() {
+  private static void jslt(final String script) {
     assertEquals(
         o(f("f", v("v")), f("test", v("test"))),
-        function(
-                o(
-                    f(
-                        "$jslt",
-                        o(f("input", o(f("f", v("v")))), f("script", v("resource:/test.jslt"))))))
+        function(o(f("$jslt", o(f("input", o(f("f", v("v")))), f("script", v(script))))))
             .apply(o()));
+  }
+
+  @Test
+  @DisplayName("$jslt 1")
+  public void jslt1() {
+    jslt("resource:/test.jslt");
+  }
+
+  @Test
+  @DisplayName("$jslt 2")
+  public void jslt2() {
+    jslt("{\"test\": \"test\", *: .}");
   }
 
   @Test
@@ -109,5 +115,13 @@ public class TestExpression {
   public void value() {
     assertEquals(v(true), function(o(f("$eq", a(v("$test"), v(1))))).apply(o(f("test", v(1)))));
     assertEquals(v(true), function(o(f("$eq", a(v("$test2"), v(null))))).apply(o(f("test", v(1)))));
+  }
+
+  @Test
+  @DisplayName("$$ROOT")
+  public void root() {
+    final JsonObject object = o(f("test", v(1)));
+
+    assertEquals(object, function(v("$$ROOT")).apply(object));
   }
 }

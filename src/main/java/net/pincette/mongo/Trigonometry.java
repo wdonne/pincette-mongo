@@ -3,7 +3,6 @@ package net.pincette.mongo;
 import static java.lang.Math.log;
 import static java.lang.Math.pow;
 import static java.lang.Math.sqrt;
-import static javax.json.Json.createValue;
 import static javax.json.JsonValue.NULL;
 import static net.pincette.mongo.Expression.math;
 import static net.pincette.mongo.Expression.mathTwo;
@@ -64,14 +63,13 @@ class Trigonometry {
     return toDouble(math(value, Math::tan));
   }
 
-  @SuppressWarnings("java:S1905") // Not true.
   private static Implementation toDouble(final Implementation implementation) {
     return (json, vars) ->
         Optional.of(implementation.apply(json, vars))
             .filter(JsonUtil::isNumber)
             .map(JsonUtil::asNumber)
             .map(JsonNumber::doubleValue)
-            .map(value -> (JsonValue) createValue(value))
+            .map(JsonUtil::createValue)
             .orElse(NULL);
   }
 }
