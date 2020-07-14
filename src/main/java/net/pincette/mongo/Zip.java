@@ -74,9 +74,9 @@ class Zip {
                         .orElseGet(() -> defaults.get(index - shortest))));
   }
 
-  static Implementation zip(final JsonValue value) {
-    final Implementation defaults = memberFunction(value, DEFAULTS);
-    final List<Implementation> implementations = memberFunctions(value, INPUTS);
+  static Implementation zip(final JsonValue value, final Features features) {
+    final Implementation defaults = memberFunction(value, DEFAULTS, features);
+    final List<Implementation> implementations = memberFunctions(value, INPUTS, features);
     final boolean useLongest = member(value, USE_LONGEST_LENGTH, v -> !isFalse(v)).orElse(false);
 
     return (json, vars) ->

@@ -7,8 +7,8 @@ import static net.pincette.mongo.Expression.implementations;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
-import java.util.function.Function;
 import java.util.function.IntPredicate;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
@@ -21,12 +21,14 @@ import javax.json.JsonValue;
 class Relational {
   private Relational() {}
 
-  static Operator asFunction(final Function<JsonValue, RelOp> predicate) {
-    return value -> ((json, vars) -> createValue(predicate.apply(value).test(json, vars)));
+  static Operator asFunction(final BiFunction<JsonValue, Features, RelOp> predicate) {
+    return (value, features) ->
+        ((json, vars) -> createValue(predicate.apply(value, features).test(json, vars)));
   }
 
-  private static RelOp compare(final JsonValue value, final IntPredicate result) {
-    final List<Implementation> implementations = implementations(value);
+  private static RelOp compare(
+      final JsonValue value, final IntPredicate result, final Features features) {
+    final List<Implementation> implementations = implementations(value, features);
 
     return (json, vars) ->
         applyImplementationsNum(implementations, json, vars, 2)
@@ -35,8 +37,8 @@ class Relational {
             .isPresent();
   }
 
-  static RelOp eq(final JsonValue value) {
-    final List<Implementation> implementations = implementations(value);
+  static RelOp eq(final JsonValue value, final Features features) {
+    final List<Implementation> implementations = implementations(value, features);
 
     return (json, vars) ->
         applyImplementationsNum(implementations, json, vars, 2)
@@ -44,24 +46,24 @@ class Relational {
             .isPresent();
   }
 
-  static RelOp gt(final JsonValue value) {
-    return compare(value, result -> result > 0);
+  static RelOp gt(final JsonValue value, final Features features) {
+    return compare(value, result -> result > 0, features);
   }
 
-  static RelOp gte(final JsonValue value) {
-    return compare(value, result -> result >= 0);
+  static RelOp gte(final JsonValue value, final Features features) {
+    return compare(value, result -> result >= 0, features);
   }
 
-  static RelOp lt(final JsonValue value) {
-    return compare(value, result -> result < 0);
+  static RelOp lt(final JsonValue value, final Features features) {
+    return compare(value, result -> result < 0, features);
   }
 
-  static RelOp lte(final JsonValue value) {
-    return compare(value, result -> result <= 0);
+  static RelOp lte(final JsonValue value, final Features features) {
+    return compare(value, result -> result <= 0, features);
   }
 
-  static RelOp ne(final JsonValue value) {
-    final BiPredicate<JsonObject, Map<String, JsonValue>> eq = eq(value);
+  static RelOp ne(final JsonValue value, final Features features) {
+    final BiPredicate<JsonObject, Map<String, JsonValue>> eq = eq(value, features);
 
     return (json, vars) -> !eq.test(json, vars);
   }

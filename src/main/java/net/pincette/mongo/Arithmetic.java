@@ -31,12 +31,12 @@ import net.pincette.json.JsonUtil;
 class Arithmetic {
   private Arithmetic() {}
 
-  static Implementation abs(final JsonValue value) {
-    return bigMath(value, BigDecimal::abs);
+  static Implementation abs(final JsonValue value, final Features features) {
+    return bigMath(value, BigDecimal::abs, features);
   }
 
-  static Implementation add(final JsonValue value) {
-    final List<Implementation> functions = implementations(value);
+  static Implementation add(final JsonValue value, final Features features) {
+    final List<Implementation> functions = implementations(value, features);
 
     return (json, vars) ->
         applyImplementations(functions, json, vars)
@@ -59,21 +59,20 @@ class Arithmetic {
             .toString());
   }
 
-  static Implementation ceil(final JsonValue value) {
-    return toLong(math(value, Math::ceil));
+  static Implementation ceil(final JsonValue value, final Features features) {
+    return toLong(math(value, Math::ceil, features));
   }
 
-  @SuppressWarnings("java:S1874") // Not true.
-  static Implementation divide(final JsonValue value) {
-    return bigMathTwo(value, BigDecimal::divide, false);
+  static Implementation divide(final JsonValue value, final Features features) {
+    return bigMathTwo(value, BigDecimal::divide, false, features);
   }
 
-  static Implementation exp(final JsonValue value) {
-    return math(value, Math::exp);
+  static Implementation exp(final JsonValue value, final Features features) {
+    return math(value, Math::exp, features);
   }
 
-  static Implementation floor(final JsonValue value) {
-    return toLong(math(value, Math::floor));
+  static Implementation floor(final JsonValue value, final Features features) {
+    return toLong(math(value, Math::floor, features));
   }
 
   private static Optional<Instant> getInstant(final List<JsonValue> addArray) {
@@ -86,24 +85,24 @@ class Arithmetic {
     return values.isEmpty() || (values.size() == 1 && isInstant(values.get(0)));
   }
 
-  static Implementation ln(final JsonValue value) {
-    return math(value, Math::log);
+  static Implementation ln(final JsonValue value, final Features features) {
+    return math(value, Math::log, features);
   }
 
-  static Implementation log(final JsonValue value) {
-    return mathTwo(value, (v1, v2) -> Math.log(v1) / Math.log(v2), false);
+  static Implementation log(final JsonValue value, final Features features) {
+    return mathTwo(value, (v1, v2) -> Math.log(v1) / Math.log(v2), false, features);
   }
 
-  static Implementation log10(final JsonValue value) {
-    return math(value, Math::log10);
+  static Implementation log10(final JsonValue value, final Features features) {
+    return math(value, Math::log10, features);
   }
 
-  static Implementation mod(final JsonValue value) {
-    return bigMathTwo(value, BigDecimal::remainder, false);
+  static Implementation mod(final JsonValue value, final Features features) {
+    return bigMathTwo(value, BigDecimal::remainder, false, features);
   }
 
-  static Implementation multiply(final JsonValue value) {
-    final List<Implementation> implementations = implementations(value);
+  static Implementation multiply(final JsonValue value, final Features features) {
+    final List<Implementation> implementations = implementations(value, features);
 
     return (json, vars) ->
         applyImplementations(implementations, json, vars).map(Arithmetic::multiply).orElse(NULL);
@@ -113,16 +112,17 @@ class Arithmetic {
     return setOp(values, BigDecimal::multiply);
   }
 
-  static Implementation pow(final JsonValue value) {
-    return bigMathTwo(value, (v1, v2) -> pow(v1, v2.intValue()), false);
+  static Implementation pow(final JsonValue value, final Features features) {
+    return bigMathTwo(value, (v1, v2) -> pow(v1, v2.intValue()), false, features);
   }
 
   private static BigDecimal pow(final BigDecimal value, final int exp) {
     return exp < 0 ? new BigDecimal(1).divide(value.pow(Math.abs(exp))) : value.pow(exp);
   }
 
-  static Implementation round(final JsonValue value) {
-    return toLong(mathTwo(value, (v1, v2) -> round(v1, v2 != null ? v2.intValue() : 0), true));
+  static Implementation round(final JsonValue value, final Features features) {
+    return toLong(
+        mathTwo(value, (v1, v2) -> round(v1, v2 != null ? v2.intValue() : 0), true, features));
   }
 
   private static double round(final double value, final int place) {
@@ -142,12 +142,12 @@ class Arithmetic {
         .orElse(NULL);
   }
 
-  static Implementation sqrt(final JsonValue value) {
-    return math(value, Math::sqrt);
+  static Implementation sqrt(final JsonValue value, final Features features) {
+    return math(value, Math::sqrt, features);
   }
 
-  static Implementation subtract(final JsonValue value) {
-    final List<Implementation> implementations = implementations(value);
+  static Implementation subtract(final JsonValue value, final Features features) {
+    final List<Implementation> implementations = implementations(value, features);
 
     return (json, vars) ->
         applyImplementationsNum(implementations, json, vars, 2)
@@ -182,8 +182,9 @@ class Arithmetic {
     return isLong(value) ? createValue(asNumber(value).longValue()) : value;
   }
 
-  static Implementation trunc(final JsonValue value) {
-    return toLong(mathTwo(value, (v1, v2) -> trunc(v1, v2 != null ? v2.intValue() : 0), true));
+  static Implementation trunc(final JsonValue value, final Features features) {
+    return toLong(
+        mathTwo(value, (v1, v2) -> trunc(v1, v2 != null ? v2.intValue() : 0), true, features));
   }
 
   private static double trunc(final double value, final int place) {

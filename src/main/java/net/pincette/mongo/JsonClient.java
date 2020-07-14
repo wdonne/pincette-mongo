@@ -278,7 +278,18 @@ public class JsonClient {
    * Finds JSON objects that match <code>filter</code>.
    *
    * @param collection the MongoDB collection.
-   * @param filter the given filter.
+   * @return The list of objects.
+   * @since 2.0
+   */
+  public static CompletionStage<List<JsonObject>> find(final MongoCollection<Document> collection) {
+    return find(collection, (Bson) null, null);
+  }
+
+  /**
+   * Finds JSON objects that match <code>filter</code>.
+   *
+   * @param collection the MongoDB collection.
+   * @param filter the given filter. It may be <code>null</code>.
    * @return The list of objects.
    * @since 1.4
    */
@@ -291,13 +302,13 @@ public class JsonClient {
    * Finds JSON objects that match <code>filter</code>.
    *
    * @param collection the MongoDB collection.
-   * @param filter the given filter.
+   * @param filter the given filter. It may be <code>null</code>.
    * @return The list of objects.
    * @since 1.4
    */
   public static CompletionStage<List<JsonObject>> find(
       final MongoCollection<Document> collection, final JsonObject filter) {
-    return find(collection, fromJson(filter), null);
+    return find(collection, filter != null ? fromJson(filter) : null, null);
   }
 
   /**
@@ -305,7 +316,20 @@ public class JsonClient {
    *
    * @param collection the MongoDB collection.
    * @param session the MongoDB session.
-   * @param filter the given filter.
+   * @return The list of objects.
+   * @since 2.0
+   */
+  public static CompletionStage<List<JsonObject>> find(
+      final MongoCollection<Document> collection, final ClientSession session) {
+    return find(collection, session, (Bson) null, null);
+  }
+
+  /**
+   * Finds JSON objects that match <code>filter</code>.
+   *
+   * @param collection the MongoDB collection.
+   * @param session the MongoDB session.
+   * @param filter the given filter. It may be <code>null</code>.
    * @return The list of objects.
    * @since 1.4
    */
@@ -319,7 +343,7 @@ public class JsonClient {
    *
    * @param collection the MongoDB collection.
    * @param session the MongoDB session.
-   * @param filter the given filter.
+   * @param filter the given filter. It may be <code>null</code>.
    * @return The list of objects.
    * @since 1.4
    */
@@ -327,14 +351,28 @@ public class JsonClient {
       final MongoCollection<Document> collection,
       final ClientSession session,
       final JsonObject filter) {
-    return find(collection, session, fromJson(filter), null);
+    return find(collection, session, filter != null ? fromJson(filter) : null, null);
   }
 
   /**
    * Finds JSON objects that match <code>filter</code>.
    *
    * @param collection the MongoDB collection.
-   * @param filter the given filter.
+   * @param setParameters a function to set the parameters for the result set.
+   * @return The list of objects.
+   * @since 2.0
+   */
+  public static CompletionStage<List<JsonObject>> find(
+      final MongoCollection<Document> collection,
+      final UnaryOperator<FindPublisher<BsonDocument>> setParameters) {
+    return find(collection, (Bson) null, setParameters);
+  }
+
+  /**
+   * Finds JSON objects that match <code>filter</code>.
+   *
+   * @param collection the MongoDB collection.
+   * @param filter the given filter. It may be <code>null</code>.
    * @param setParameters a function to set the parameters for the result set.
    * @return The list of objects.
    * @since 1.4
@@ -343,7 +381,9 @@ public class JsonClient {
       final MongoCollection<Document> collection,
       final Bson filter,
       final UnaryOperator<FindPublisher<BsonDocument>> setParameters) {
-    return Collection.find(collection, filter, BsonDocument.class, setParameters)
+    return (filter != null
+            ? Collection.find(collection, filter, BsonDocument.class, setParameters)
+            : Collection.find(collection, BsonDocument.class, setParameters))
         .thenApply(JsonClient::toJson);
   }
 
@@ -351,7 +391,7 @@ public class JsonClient {
    * Finds JSON objects that match <code>filter</code>.
    *
    * @param collection the MongoDB collection.
-   * @param filter the given filter.
+   * @param filter the given filter. It may be <code>null</code>.
    * @param setParameters a function to set the parameters for the result set.
    * @return The list of objects.
    * @since 1.4
@@ -360,7 +400,7 @@ public class JsonClient {
       final MongoCollection<Document> collection,
       final JsonObject filter,
       final UnaryOperator<FindPublisher<BsonDocument>> setParameters) {
-    return find(collection, fromJson(filter), setParameters);
+    return find(collection, filter != null ? fromJson(filter) : null, setParameters);
   }
 
   /**
@@ -368,7 +408,7 @@ public class JsonClient {
    *
    * @param collection the MongoDB collection.
    * @param session the MongoDB session.
-   * @param filter the given filter.
+   * @param filter the given filter. It may be <code>null</code>.
    * @param setParameters a function to set the parameters for the result set.
    * @return The list of objects.
    * @since 1.4
@@ -378,7 +418,9 @@ public class JsonClient {
       final ClientSession session,
       final Bson filter,
       final UnaryOperator<FindPublisher<BsonDocument>> setParameters) {
-    return Collection.find(collection, session, filter, BsonDocument.class, setParameters)
+    return (filter != null
+            ? Collection.find(collection, session, filter, BsonDocument.class, setParameters)
+            : Collection.find(collection, session, BsonDocument.class, setParameters))
         .thenApply(JsonClient::toJson);
   }
 
@@ -387,7 +429,7 @@ public class JsonClient {
    *
    * @param collection the MongoDB collection.
    * @param session the MongoDB session.
-   * @param filter the given filter.
+   * @param filter the given filter. It may be <code>null</code>.
    * @param setParameters a function to set the parameters for the result set.
    * @return The list of objects.
    * @since 1.4
@@ -397,40 +439,108 @@ public class JsonClient {
       final ClientSession session,
       final JsonObject filter,
       final UnaryOperator<FindPublisher<BsonDocument>> setParameters) {
-    return find(collection, session, fromJson(filter), setParameters);
+    return find(collection, session, filter != null ? fromJson(filter) : null, setParameters);
   }
 
   /**
    * Finds JSON objects that match <code>filter</code>.
    *
    * @param collection the MongoDB collection.
-   * @param filter the given filter.
+   * @return The object publisher.
+   * @since 2.0
+   */
+  public static Publisher<JsonObject> findPublisher(final MongoCollection<Document> collection) {
+    return findPublisher(collection, null, (Bson) null, null);
+  }
+
+  /**
+   * Finds JSON objects that match <code>filter</code>.
+   *
+   * @param collection the MongoDB collection.
+   * @param filter the given filter. It may be <code>null</code>.
    * @return The object publisher.
    * @since 1.4
    */
   public static Publisher<JsonObject> findPublisher(
       final MongoCollection<Document> collection, final Bson filter) {
-    return findPublisher(collection, filter, null);
+    return findPublisher(collection, null, filter, null);
   }
 
   /**
    * Finds JSON objects that match <code>filter</code>.
    *
    * @param collection the MongoDB collection.
-   * @param filter the given filter.
+   * @param filter the given filter. It may be <code>null</code>.
    * @return The object publisher.
    * @since 1.4
    */
   public static Publisher<JsonObject> findPublisher(
       final MongoCollection<Document> collection, final JsonObject filter) {
-    return findPublisher(collection, fromJson(filter), null);
+    return findPublisher(collection, null, filter != null ? fromJson(filter) : null, null);
   }
 
   /**
    * Finds JSON objects that match <code>filter</code>.
    *
    * @param collection the MongoDB collection.
-   * @param filter the given filter.
+   * @param session the MongoDB session.
+   * @param setParameters a function to set the parameters for the result set.
+   * @return The object publisher.
+   * @since 2.0
+   */
+  public static Publisher<JsonObject> findPublisher(
+      final MongoCollection<Document> collection,
+      final ClientSession session,
+      final UnaryOperator<FindPublisher<BsonDocument>> setParameters) {
+    return findPublisher(collection, session, (Bson) null, setParameters);
+  }
+
+  /**
+   * Finds JSON objects that match <code>filter</code>.
+   *
+   * @param collection the MongoDB collection.
+   * @param session the MongoDB session.
+   * @return The object publisher.
+   * @since 2.0
+   */
+  public static Publisher<JsonObject> findPublisher(
+      final MongoCollection<Document> collection, final ClientSession session) {
+    return findPublisher(collection, session, (Bson) null, null);
+  }
+
+  /**
+   * Finds JSON objects that match <code>filter</code>.
+   *
+   * @param collection the MongoDB collection.
+   * @param session the MongoDB session.
+   * @param filter the given filter. It may be <code>null</code>.
+   * @return The object publisher.
+   * @since 2.0
+   */
+  public static Publisher<JsonObject> findPublisher(
+      final MongoCollection<Document> collection, final ClientSession session, final Bson filter) {
+    return findPublisher(collection, session, filter, null);
+  }
+
+  /**
+   * Finds JSON objects that match <code>filter</code>.
+   *
+   * @param collection the MongoDB collection.
+   * @param setParameters a function to set the parameters for the result set.
+   * @return The object publisher.
+   * @since 2.0
+   */
+  public static Publisher<JsonObject> findPublisher(
+      final MongoCollection<Document> collection,
+      final UnaryOperator<FindPublisher<BsonDocument>> setParameters) {
+    return findPublisher(collection, (Bson) null, setParameters);
+  }
+
+  /**
+   * Finds JSON objects that match <code>filter</code>.
+   *
+   * @param collection the MongoDB collection.
+   * @param filter the given filter. It may be <code>null</code>.
    * @param setParameters a function to set the parameters for the result set.
    * @return The object publisher.
    * @since 1.4
@@ -439,14 +549,18 @@ public class JsonClient {
       final MongoCollection<Document> collection,
       final Bson filter,
       final UnaryOperator<FindPublisher<BsonDocument>> setParameters) {
-    return findPublisher(() -> collection.find(filter, BsonDocument.class), setParameters);
+    return findPublisher(
+        filter != null
+            ? () -> collection.find(filter, BsonDocument.class)
+            : () -> collection.find(BsonDocument.class),
+        setParameters);
   }
 
   /**
    * Finds JSON objects that match <code>filter</code>.
    *
    * @param collection the MongoDB collection.
-   * @param filter the given filter.
+   * @param filter the given filter. It may be <code>null</code>.
    * @param setParameters a function to set the parameters for the result set.
    * @return The object publisher.
    * @since 1.4
@@ -455,7 +569,7 @@ public class JsonClient {
       final MongoCollection<Document> collection,
       final JsonObject filter,
       final UnaryOperator<FindPublisher<BsonDocument>> setParameters) {
-    return findPublisher(collection, fromJson(filter), setParameters);
+    return findPublisher(collection, filter != null ? fromJson(filter) : null, setParameters);
   }
 
   /**
@@ -463,7 +577,7 @@ public class JsonClient {
    *
    * @param collection the MongoDB collection.
    * @param session the MongoDB session.
-   * @param filter the given filter.
+   * @param filter the given filter. It may be <code>null</code>.
    * @param setParameters a function to set the parameters for the result set.
    * @return The object publisher.
    * @since 1.4
@@ -473,7 +587,11 @@ public class JsonClient {
       final ClientSession session,
       final Bson filter,
       final UnaryOperator<FindPublisher<BsonDocument>> setParameters) {
-    return findPublisher(() -> collection.find(session, filter, BsonDocument.class), setParameters);
+    return findPublisher(
+        filter != null
+            ? () -> collection.find(session, filter, BsonDocument.class)
+            : () -> collection.find(session, BsonDocument.class),
+        setParameters);
   }
 
   /**
@@ -481,7 +599,7 @@ public class JsonClient {
    *
    * @param collection the MongoDB collection.
    * @param session the MongoDB session.
-   * @param filter the given filter.
+   * @param filter the given filter. It may be <code>null</code>.
    * @param setParameters a function to set the parameters for the result set.
    * @return The object publisher.
    * @since 1.4
@@ -491,7 +609,8 @@ public class JsonClient {
       final ClientSession session,
       final JsonObject filter,
       final UnaryOperator<FindPublisher<BsonDocument>> setParameters) {
-    return findPublisher(collection, session, fromJson(filter), setParameters);
+    return findPublisher(
+        collection, session, filter != null ? fromJson(filter) : null, setParameters);
   }
 
   private static Publisher<JsonObject> findPublisher(

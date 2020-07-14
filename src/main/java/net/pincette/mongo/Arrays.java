@@ -67,8 +67,8 @@ class Arrays {
 
   private Arrays() {}
 
-  static Implementation arrayElemAt(final JsonValue value) {
-    final List<Implementation> implementations = implementations(value);
+  static Implementation arrayElemAt(final JsonValue value, final Features features) {
+    final List<Implementation> implementations = implementations(value, features);
 
     return (json, vars) ->
         applyImplementationsNum(implementations, json, vars, 2)
@@ -85,8 +85,8 @@ class Arrays {
     return array.get(index >= 0 ? index : (array.size() + index));
   }
 
-  static Implementation arrayToObject(final JsonValue value) {
-    final Implementation implementation = implementation(value);
+  static Implementation arrayToObject(final JsonValue value, final Features features) {
+    final Implementation implementation = implementation(value, features);
 
     return (json, vars) ->
         Optional.of(implementation.apply(json, vars))
@@ -127,19 +127,19 @@ class Arrays {
         .orElse(0);
   }
 
-  static Implementation concatArrays(final JsonValue value) {
-    return arraysOperator(value, Arrays::concatArrays);
+  static Implementation concatArrays(final JsonValue value, final Features features) {
+    return arraysOperator(value, Arrays::concatArrays, features);
   }
 
   private static JsonValue concatArrays(final List<JsonArray> array) {
     return toArray(array.stream().flatMap(JsonArray::stream));
   }
 
-  static Implementation elemMatch(final JsonValue value) {
+  static Implementation elemMatch(final JsonValue value, final Features features) {
     final Implementation implementation =
-        isElemMatch(value) ? implementation(value.asJsonArray().get(0)) : null;
+        isElemMatch(value) ? implementation(value.asJsonArray().get(0), features) : null;
     final Map<String, Implementation> conditions =
-        elemMatchConditions(value.asJsonArray().get(1).asJsonObject());
+        elemMatchConditions(value.asJsonArray().get(1).asJsonObject(), features);
 
     return (json, vars) ->
         implementation != null && conditions != null
@@ -148,42 +148,46 @@ class Arrays {
                 .map(JsonValue::asJsonArray)
                 .flatMap(
                     array ->
-                        Optional.of(elemMatchPredicate(json, vars, conditions))
+                        Optional.of(elemMatchPredicate(json, vars, conditions, features))
                             .flatMap(predicate -> array.stream().filter(predicate).findFirst()))
                 .orElse(NULL)
             : NULL;
   }
 
-  private static Map<String, Implementation> elemMatchConditions(final JsonObject expression) {
+  private static Map<String, Implementation> elemMatchConditions(
+      final JsonObject expression, final Features features) {
     return expression.entrySet().stream()
-        .collect(toMap(Entry::getKey, e -> implementation(e.getValue())));
+        .collect(toMap(Entry::getKey, e -> implementation(e.getValue(), features)));
   }
 
   private static Predicate<JsonValue> elemMatchPredicate(
       final JsonObject json,
       final Map<String, JsonValue> variables,
-      final Map<String, Implementation> conditions) {
+      final Map<String, Implementation> conditions,
+      final Features features) {
     return Match.elemMatchPredicate(
         conditions.entrySet().stream()
             .reduce(
                 createObjectBuilder(),
                 (b, e) -> b.add(e.getKey(), e.getValue().apply(json, variables)),
                 (b1, b2) -> b1)
-            .build());
+            .build(),
+        features);
   }
 
-  static Implementation filter(final JsonValue value) {
+  static Implementation filter(final JsonValue value, final Features features) {
     return mapper(
         value,
         (array, values) ->
             toArray(
                 zip(array.stream(), values.stream())
                     .filter(pair -> !isFalse(pair.second))
-                    .map(pair -> pair.first)));
+                    .map(pair -> pair.first)),
+        features);
   }
 
-  static Implementation in(final JsonValue value) {
-    final List<Implementation> implementations = implementations(value);
+  static Implementation in(final JsonValue value, final Features features) {
+    final List<Implementation> implementations = implementations(value, features);
 
     return (json, vars) ->
         applyImplementationsNum(implementations, json, vars, 2)
@@ -193,8 +197,8 @@ class Arrays {
             .orElse(NULL);
   }
 
-  static Implementation indexOfArray(final JsonValue value) {
-    final List<Implementation> implementations = implementations(value);
+  static Implementation indexOfArray(final JsonValue value, final Features features) {
+    final List<Implementation> implementations = implementations(value, features);
 
     return (json, vars) ->
         applyImplementations(
@@ -223,8 +227,8 @@ class Arrays {
         .orElseGet(() -> createValue(-1));
   }
 
-  static Implementation isArray(final JsonValue value) {
-    final Implementation implementation = implementation(value);
+  static Implementation isArray(final JsonValue value, final Features features) {
+    final Implementation implementation = implementation(value, features);
 
     return (json, vars) ->
         Optional.of(implementation.apply(json, vars))
@@ -255,15 +259,17 @@ class Arrays {
         .isPresent();
   }
 
-  static Implementation mapOp(final JsonValue value) {
-    return mapper(value, (array, values) -> toArray(values.stream()));
+  static Implementation mapOp(final JsonValue value, final Features features) {
+    return mapper(value, (array, values) -> toArray(values.stream()), features);
   }
 
   private static Implementation mapper(
-      final JsonValue value, final BiFunction<JsonArray, List<JsonValue>, JsonValue> combine) {
+      final JsonValue value,
+      final BiFunction<JsonArray, List<JsonValue>, JsonValue> combine,
+      final Features features) {
     final JsonValue in =
         member(value, IN, v -> v).orElseGet(() -> member(value, COND, v -> v).orElse(null));
-    final Implementation input = memberFunction(value, INPUT);
+    final Implementation input = memberFunction(value, INPUT, features);
     final String variable = member(value, AS, v -> asString(v).getString()).orElse(THIS);
 
     return (json, vars) ->
@@ -275,7 +281,7 @@ class Arrays {
                     array ->
                         combine.apply(
                             array,
-                            mapper(array, "$$" + variable, in).stream()
+                            mapper(array, "$$" + variable, in, features).stream()
                                 .map(i -> i.apply(json, vars))
                                 .collect(toList())))
                 .orElse(NULL)
@@ -283,14 +289,17 @@ class Arrays {
   }
 
   private static List<Implementation> mapper(
-      final JsonArray values, final String variable, final JsonValue expression) {
+      final JsonArray values,
+      final String variable,
+      final JsonValue expression,
+      final Features features) {
     return values.stream()
-        .map(v -> implementation(replaceVariables(expression, map(pair(variable, v)))))
+        .map(v -> implementation(replaceVariables(expression, map(pair(variable, v))), features))
         .collect(toList());
   }
 
-  static Implementation objectToArray(final JsonValue value) {
-    final Implementation implementation = implementation(value);
+  static Implementation objectToArray(final JsonValue value, final Features features) {
+    final Implementation implementation = implementation(value, features);
 
     return (json, vars) ->
         Optional.of(implementation.apply(json, vars))
@@ -309,8 +318,8 @@ class Arrays {
         .build();
   }
 
-  static Implementation range(final JsonValue value) {
-    final List<Implementation> implementations = implementations(value);
+  static Implementation range(final JsonValue value, final Features features) {
+    final List<Implementation> implementations = implementations(value, features);
 
     return (json, vars) ->
         applyImplementations(
@@ -334,10 +343,10 @@ class Arrays {
         : createValue(rangeExclusive(start, end, Math.abs(step)));
   }
 
-  static Implementation reduce(final JsonValue value) {
+  static Implementation reduce(final JsonValue value, final Features features) {
     final JsonValue in = member(value, IN, v -> v).orElse(null);
-    final Implementation initial = memberFunction(value, INITIAL_VALUE);
-    final Implementation input = memberFunction(value, INPUT);
+    final Implementation initial = memberFunction(value, INITIAL_VALUE, features);
+    final Implementation input = memberFunction(value, INPUT, features);
 
     return (json, vars) ->
         input != null && initial != null && in != null
@@ -349,21 +358,25 @@ class Arrays {
                         array.stream()
                             .reduce(
                                 initial.apply(json, vars),
-                                (result, v) -> reduce(in, result, v).apply(json, vars),
+                                (result, v) -> reduce(in, result, v, features).apply(json, vars),
                                 (r1, r2) -> r1))
                 .orElse(NULL)
             : NULL;
   }
 
   private static Implementation reduce(
-      final JsonValue expression, final JsonValue result, final JsonValue value) {
+      final JsonValue expression,
+      final JsonValue result,
+      final JsonValue value,
+      final Features features) {
     return implementation(
         replaceVariables(
-            replaceVariables(expression, map(pair("$$" + THIS, value))), map(pair(VALUE, result))));
+            replaceVariables(expression, map(pair("$$" + THIS, value))), map(pair(VALUE, result))),
+        features);
   }
 
-  static Implementation reverseArray(final JsonValue value) {
-    final Implementation implementation = implementation(value);
+  static Implementation reverseArray(final JsonValue value, final Features features) {
+    final Implementation implementation = implementation(value, features);
 
     return (json, vars) ->
         Optional.of(implementation.apply(json, vars))
@@ -373,8 +386,8 @@ class Arrays {
             .orElse(NULL);
   }
 
-  static Implementation size(final JsonValue value) {
-    final Implementation implementation = implementation(value);
+  static Implementation size(final JsonValue value, final Features features) {
+    final Implementation implementation = implementation(value, features);
 
     return (json, vars) ->
         Optional.of(implementation.apply(json, vars))
@@ -385,8 +398,8 @@ class Arrays {
             .orElse(NULL);
   }
 
-  static Implementation slice(final JsonValue value) {
-    final List<Implementation> implementations = implementations(value);
+  static Implementation slice(final JsonValue value, final Features features) {
+    final List<Implementation> implementations = implementations(value, features);
 
     return (json, vars) ->
         applyImplementations(
@@ -426,7 +439,7 @@ class Arrays {
     return values.size() == 2 ? defaultPosition.getAsInt() : setPosition.getAsInt();
   }
 
-  static Implementation sort(final JsonValue value) {
+  static Implementation sort(final JsonValue value, final Features features) {
     final Optional<JsonObject> object =
         Optional.of(value).filter(JsonUtil::isObject).map(JsonValue::asJsonObject);
     final String direction =
@@ -436,7 +449,7 @@ class Arrays {
             .orElse(ASC);
     final List<String> paths =
         object.map(json -> getStrings(json, PATHS).collect(toList())).orElse(null);
-    final Implementation input = memberFunction(value, INPUT);
+    final Implementation input = memberFunction(value, INPUT, features);
 
     return (json, vars) ->
         input != null

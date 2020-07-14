@@ -52,13 +52,13 @@ class Types {
 
   private Types() {}
 
-  static Implementation convert(final JsonValue value) {
+  static Implementation convert(final JsonValue value, final Features features) {
     final List<Implementation> implementations =
         list(
-            memberFunction(value, INPUT),
-            memberFunction(value, TO),
-            ofNullable(memberFunction(value, ON_ERROR)).orElse((json, vars) -> NULL),
-            ofNullable(memberFunction(value, ON_NULL)).orElse((json, vars) -> NULL));
+            memberFunction(value, INPUT, features),
+            memberFunction(value, TO, features),
+            ofNullable(memberFunction(value, ON_ERROR, features)).orElse((json, vars) -> NULL),
+            ofNullable(memberFunction(value, ON_NULL, features)).orElse((json, vars) -> NULL));
 
     return (json, vars) ->
         applyImplementations(
@@ -153,24 +153,25 @@ class Types {
     }
   }
 
-  static Implementation toBool(final JsonValue value) {
-    return toConvert(value, BOOL);
+  static Implementation toBool(final JsonValue value, final Features features) {
+    return toConvert(value, BOOL, features);
   }
 
-  private static Implementation toConvert(final JsonValue value, final String type) {
-    return convert(createObjectBuilder().add(INPUT, value).add(TO, type).build());
+  private static Implementation toConvert(
+      final JsonValue value, final String type, final Features features) {
+    return convert(createObjectBuilder().add(INPUT, value).add(TO, type).build(), features);
   }
 
-  static Implementation toDecimal(final JsonValue value) {
-    return toConvert(value, DECIMAL);
+  static Implementation toDecimal(final JsonValue value, final Features features) {
+    return toConvert(value, DECIMAL, features);
   }
 
-  static Implementation toDouble(final JsonValue value) {
-    return toConvert(value, DOUBLE);
+  static Implementation toDouble(final JsonValue value, final Features features) {
+    return toConvert(value, DOUBLE, features);
   }
 
-  static Implementation toInt(final JsonValue value) {
-    return toConvert(value, INT);
+  static Implementation toInt(final JsonValue value, final Features features) {
+    return toConvert(value, INT, features);
   }
 
   private static String toNumberTypeString(final JsonValue value) {
@@ -180,12 +181,12 @@ class Types {
     return isInt(value) ? INT : tryLong.get();
   }
 
-  static Implementation toLong(final JsonValue value) {
-    return toConvert(value, LONG);
+  static Implementation toLong(final JsonValue value, final Features features) {
+    return toConvert(value, LONG, features);
   }
 
-  static Implementation toString(final JsonValue value) {
-    return toConvert(value, STRING_TYPE);
+  static Implementation toString(final JsonValue value, final Features features) {
+    return toConvert(value, STRING_TYPE, features);
   }
 
   private static String toTypeString(final JsonValue value) {
@@ -206,8 +207,8 @@ class Types {
     }
   }
 
-  static Implementation type(final JsonValue value) {
-    final Implementation implementation = implementation(value);
+  static Implementation type(final JsonValue value, final Features features) {
+    final Implementation implementation = implementation(value, features);
 
     return (json, vars) ->
         Optional.of(implementation.apply(json, vars))

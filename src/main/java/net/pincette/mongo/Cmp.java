@@ -23,8 +23,8 @@ import javax.json.JsonValue;
 class Cmp {
   private Cmp() {}
 
-  static Implementation cmp(final JsonValue value) {
-    final List<Implementation> implementations = implementations(value);
+  static Implementation cmp(final JsonValue value, final Features features) {
+    final List<Implementation> implementations = implementations(value, features);
 
     return (json, vars) ->
         applyImplementationsNum(implementations, json, vars, 2)

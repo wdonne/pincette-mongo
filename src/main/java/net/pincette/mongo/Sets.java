@@ -22,8 +22,8 @@ import net.pincette.util.Collections;
 class Sets {
   private Sets() {}
 
-  static Implementation allElementsTrue(final JsonValue value) {
-    final List<Implementation> implementations = implementations(value);
+  static Implementation allElementsTrue(final JsonValue value, final Features features) {
+    final List<Implementation> implementations = implementations(value, features);
 
     return (json, vars) ->
         createValue(
@@ -32,8 +32,8 @@ class Sets {
                 .isPresent());
   }
 
-  static Implementation anyElementsTrue(final JsonValue value) {
-    final List<Implementation> implementations = implementations(value);
+  static Implementation anyElementsTrue(final JsonValue value, final Features features) {
+    final List<Implementation> implementations = implementations(value, features);
 
     return (json, vars) ->
         createValue(
@@ -46,16 +46,16 @@ class Sets {
     return !array.contains(value);
   }
 
-  static Implementation setDifference(final JsonValue value) {
-    return arraysOperatorTwo(value, Sets::setDifference);
+  static Implementation setDifference(final JsonValue value, final Features features) {
+    return arraysOperatorTwo(value, Sets::setDifference, features);
   }
 
   private static JsonValue setDifference(final JsonArray a1, final JsonArray a2) {
     return toArray(a1.stream().filter(v -> notIn(a2, v)));
   }
 
-  static Implementation setEquals(final JsonValue value) {
-    return arraysOperator(value, Sets::setEquals);
+  static Implementation setEquals(final JsonValue value, final Features features) {
+    return arraysOperator(value, Sets::setEquals, features);
   }
 
   private static JsonValue setEquals(final List<JsonArray> values) {
@@ -67,16 +67,16 @@ class Sets {
                 .orElse(false));
   }
 
-  static Implementation setIntersection(final JsonValue value) {
-    return arraysOperator(value, Sets::setIntersection);
+  static Implementation setIntersection(final JsonValue value, final Features features) {
+    return arraysOperator(value, Sets::setIntersection, features);
   }
 
   private static JsonValue setIntersection(final List<JsonArray> values) {
     return setOp(values, Collections::intersection);
   }
 
-  static Implementation setIsSubset(final JsonValue value) {
-    return arraysOperatorTwo(value, Sets::setIsSubset);
+  static Implementation setIsSubset(final JsonValue value, final Features features) {
+    return arraysOperatorTwo(value, Sets::setIsSubset, features);
   }
 
   private static JsonValue setIsSubset(final JsonArray a1, final JsonArray a2) {
@@ -89,8 +89,8 @@ class Sets {
     return toArray(op.apply(sets(values)).stream());
   }
 
-  static Implementation setUnion(final JsonValue value) {
-    return arraysOperator(value, Sets::setUnion);
+  static Implementation setUnion(final JsonValue value, final Features features) {
+    return arraysOperator(value, Sets::setUnion, features);
   }
 
   private static JsonValue setUnion(final List<JsonArray> values) {

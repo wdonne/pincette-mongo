@@ -62,8 +62,8 @@ class Strings {
     return toArray(takeWhile(matcher, m -> m, Matcher::find).map(Strings::capture));
   }
 
-  static Implementation concat(final JsonValue value) {
-    return stringsOperator(value, Strings::concat);
+  static Implementation concat(final JsonValue value, final Features features) {
+    return stringsOperator(value, Strings::concat, features);
   }
 
   private static JsonValue concat(final List<String> strings) {
@@ -76,8 +76,8 @@ class Strings {
         : empty();
   }
 
-  static Implementation indexOfCP(final JsonValue value) {
-    final List<Implementation> implementations = implementations(value);
+  static Implementation indexOfCP(final JsonValue value, final Features features) {
+    final List<Implementation> implementations = implementations(value, features);
 
     return (json, vars) ->
         applyImplementations(
@@ -112,17 +112,17 @@ class Strings {
     return isNumber(value) && asInt(value) >= 0;
   }
 
-  static Implementation ltrim(final JsonValue value) {
-    return trim(value, true, false);
+  static Implementation ltrim(final JsonValue value, final Features features) {
+    return trim(value, true, false, features);
   }
 
   private static Implementation regex(
-      final JsonValue value, final Function<Matcher, JsonValue> capture) {
+      final JsonValue value, final Function<Matcher, JsonValue> capture, final Features features) {
     final List<Implementation> implementations =
         list(
-            memberFunction(value, INPUT),
-            memberFunction(value, REGEX),
-            memberFunction(value, OPTIONS));
+            memberFunction(value, INPUT, features),
+            memberFunction(value, REGEX, features),
+            memberFunction(value, OPTIONS, features));
 
     return (json, vars) ->
         applyImplementations(
@@ -142,45 +142,46 @@ class Strings {
             .orElse(NULL);
   }
 
-  static Implementation regexFind(final JsonValue value) {
-    return regex(value, matcher -> matcher.find() ? capture(matcher) : NULL);
+  static Implementation regexFind(final JsonValue value, final Features features) {
+    return regex(value, matcher -> matcher.find() ? capture(matcher) : NULL, features);
   }
 
-  static Implementation regexFindAll(final JsonValue value) {
-    return regex(value, Strings::captureAll);
+  static Implementation regexFindAll(final JsonValue value, final Features features) {
+    return regex(value, Strings::captureAll, features);
   }
 
-  static Implementation regexMatch(final JsonValue value) {
-    return regex(value, matcher -> createValue(matcher.find()));
+  static Implementation regexMatch(final JsonValue value, final Features features) {
+    return regex(value, matcher -> createValue(matcher.find()), features);
   }
 
-  static Implementation rtrim(final JsonValue value) {
-    return trim(value, false, true);
+  static Implementation rtrim(final JsonValue value, final Features features) {
+    return trim(value, false, true, features);
   }
 
   private static boolean shouldTrim(final char c, final String chars) {
     return (chars != null && chars.indexOf(c) != -1) || (chars == null && isWhitespace(c));
   }
 
-  static Implementation split(final JsonValue value) {
-    return stringTwo(value, Strings::split);
+  static Implementation split(final JsonValue value, final Features features) {
+    return stringTwo(value, Strings::split, features);
   }
 
   private static JsonValue split(final String s, final String delimiter) {
     return toArray(stream(s.split(quote(delimiter))).map(JsonUtil::createValue));
   }
 
-  static Implementation strLenCP(final JsonValue value) {
-    return string(value, s -> createValue(s.length()));
+  static Implementation strLenCP(final JsonValue value, final Features features) {
+    return string(value, s -> createValue(s.length()), features);
   }
 
-  static Implementation strcasecmp(final JsonValue value) {
-    return stringTwo(value, (s1, s2) -> createValue(normalize(s1.compareToIgnoreCase(s2))));
+  static Implementation strcasecmp(final JsonValue value, final Features features) {
+    return stringTwo(
+        value, (s1, s2) -> createValue(normalize(s1.compareToIgnoreCase(s2))), features);
   }
 
   private static Implementation string(
-      final JsonValue value, final Function<String, JsonValue> op) {
-    final Implementation implementation = implementation(value);
+      final JsonValue value, final Function<String, JsonValue> op, final Features features) {
+    final Implementation implementation = implementation(value, features);
 
     return (json, vars) ->
         Optional.of(implementation.apply(json, vars))
@@ -192,8 +193,8 @@ class Strings {
   }
 
   private static Implementation stringOrNull(
-      final JsonValue value, final Function<String, JsonValue> op) {
-    final Implementation implementation = implementation(value);
+      final JsonValue value, final Function<String, JsonValue> op, final Features features) {
+    final Implementation implementation = implementation(value, features);
 
     return (json, vars) ->
         Optional.of(implementation.apply(json, vars))
@@ -203,8 +204,10 @@ class Strings {
   }
 
   private static Implementation stringTwo(
-      final JsonValue value, final BiFunction<String, String, JsonValue> op) {
-    final List<Implementation> implementations = implementations(value);
+      final JsonValue value,
+      final BiFunction<String, String, JsonValue> op,
+      final Features features) {
+    final List<Implementation> implementations = implementations(value, features);
 
     return (json, vars) ->
         applyImplementationsNum(implementations, json, vars, 2)
@@ -213,8 +216,8 @@ class Strings {
             .orElse(NULL);
   }
 
-  static Implementation substrCP(final JsonValue value) {
-    final List<Implementation> implementations = implementations(value);
+  static Implementation substrCP(final JsonValue value, final Features features) {
+    final List<Implementation> implementations = implementations(value, features);
 
     return (json, vars) ->
         applyImplementationsNum(implementations, json, vars, 3)
@@ -236,22 +239,22 @@ class Strings {
     return createValue(s.substring(index, min(s.length(), index + count)));
   }
 
-  static Implementation toLower(final JsonValue value) {
-    return stringOrNull(value, s -> createValue(s.toLowerCase()));
+  static Implementation toLower(final JsonValue value, final Features features) {
+    return stringOrNull(value, s -> createValue(s.toLowerCase()), features);
   }
 
-  static Implementation toUpper(final JsonValue value) {
-    return stringOrNull(value, s -> createValue(s.toUpperCase()));
+  static Implementation toUpper(final JsonValue value, final Features features) {
+    return stringOrNull(value, s -> createValue(s.toUpperCase()), features);
   }
 
-  static Implementation trim(final JsonValue value) {
-    return trim(value, true, true);
+  static Implementation trim(final JsonValue value, final Features features) {
+    return trim(value, true, true, features);
   }
 
   private static Implementation trim(
-      final JsonValue value, final boolean start, final boolean end) {
+      final JsonValue value, final boolean start, final boolean end, final Features features) {
     final List<Implementation> implementations =
-        list(memberFunction(value, INPUT), memberFunction(value, CHARS));
+        list(memberFunction(value, INPUT, features), memberFunction(value, CHARS, features));
 
     return (json, vars) ->
         applyImplementations(implementations, json, vars, fncs -> fncs.get(0) != null)
@@ -277,7 +280,8 @@ class Strings {
   private static int trimEnd(final String s, final String chars) {
     int i;
 
-    for (i = s.length() - 1; i >= 0 && shouldTrim(s.charAt(i), chars); --i) ;
+    for (i = s.length() - 1; i >= 0 && shouldTrim(s.charAt(i), chars); --i)
+      ;
 
     return i + 1;
   }
@@ -285,7 +289,8 @@ class Strings {
   private static int trimStart(final String s, final String chars) {
     int i;
 
-    for (i = 0; i < s.length() && shouldTrim(s.charAt(i), chars); ++i) ;
+    for (i = 0; i < s.length() && shouldTrim(s.charAt(i), chars); ++i)
+      ;
 
     return i;
   }

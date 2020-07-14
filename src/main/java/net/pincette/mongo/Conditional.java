@@ -30,7 +30,8 @@ class Conditional {
 
   private Conditional() {}
 
-  private static List<Pair<Implementation, Implementation>> branches(final JsonValue value) {
+  private static List<Pair<Implementation, Implementation>> branches(
+      final JsonValue value, final Features features) {
     return Optional.of(value)
         .filter(JsonUtil::isArray)
         .map(JsonValue::asJsonArray)
@@ -43,20 +44,20 @@ class Conditional {
                     .map(
                         json ->
                             pair(
-                                implementation(json.getValue("/" + CASE)),
-                                implementation(json.getValue("/" + THEN))))
+                                implementation(json.getValue("/" + CASE), features),
+                                implementation(json.getValue("/" + THEN), features)))
                     .collect(toList()))
         .orElse(null);
   }
 
-  static Implementation cond(final JsonValue value) {
+  static Implementation cond(final JsonValue value, final Features features) {
     final List<Implementation> implementations =
         isArray(value)
-            ? implementations(value)
+            ? implementations(value, features)
             : list(
-                memberFunction(value, IF),
-                memberFunction(value, THEN),
-                memberFunction(value, ELSE));
+                memberFunction(value, IF, features),
+                memberFunction(value, THEN, features),
+                memberFunction(value, ELSE, features));
 
     return (json, vars) ->
         applyImplementations(
@@ -65,8 +66,8 @@ class Conditional {
             .orElse(NULL);
   }
 
-  static Implementation ifNull(final JsonValue value) {
-    final List<Implementation> implementations = implementations(value);
+  static Implementation ifNull(final JsonValue value, final Features features) {
+    final List<Implementation> implementations = implementations(value, features);
 
     return (json, vars) ->
         applyImplementationsNum(implementations, json, vars, 2)
@@ -74,10 +75,10 @@ class Conditional {
             .orElse(NULL);
   }
 
-  static Implementation switchFunction(final JsonValue value) {
+  static Implementation switchFunction(final JsonValue value, final Features features) {
     final List<Pair<Implementation, Implementation>> branches =
-        member(value, BRANCHES, Conditional::branches).orElse(null);
-    final Implementation defaultFunction = memberFunction(value, DEFAULT);
+        member(value, BRANCHES, expr -> branches(expr, features)).orElse(null);
+    final Implementation defaultFunction = memberFunction(value, DEFAULT, features);
 
     return (json, vars) ->
         branches != null && defaultFunction != null

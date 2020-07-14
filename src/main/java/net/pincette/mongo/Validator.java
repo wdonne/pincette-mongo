@@ -154,7 +154,22 @@ public class Validator {
           entry -> getLastSegment(entry.path, "\\.").map(REMOVE::contains).orElse(false),
           entry -> Optional.empty());
   private final Map<JsonObject, Condition> conditionCache = new HashMap<>();
+  private final Features features;
   private final Map<String, JsonObject> loaded = new HashMap<>();
+
+  public Validator() {
+    this(null);
+  }
+
+  /**
+   * Creates a validator with extra features for the underlying MongoDB query language.
+   *
+   * @param features the extra features. It may be <code>null</code>.
+   * @since 2.0
+   */
+  public Validator(final Features features) {
+    this.features = features;
+  }
 
   private static Transformer arrayExpander(final JsonObject macros) {
     return new Transformer(
@@ -187,11 +202,12 @@ public class Validator {
             .orElseGet(JsonUtil::emptyObject));
   }
 
-  private static Condition condition(final JsonObject condition, final String code) {
+  private static Condition condition(
+      final JsonObject condition, final String code, final Features features) {
     final String field = getField(condition);
     final boolean isExists = field != null && isExists(condition.get(field));
-    final Predicate<JsonObject> predicateObject = predicate(strip(condition));
-    final Predicate<JsonValue> predicateValue = predicateValue(strip(condition));
+    final Predicate<JsonObject> predicateObject = predicate(strip(condition), features);
+    final Predicate<JsonValue> predicateValue = predicateValue(strip(condition), features);
     final Predicate<JsonValue> test =
         json ->
             isObject(json) ? predicateObject.test(json.asJsonObject()) : predicateValue.test(json);
@@ -275,8 +291,9 @@ public class Validator {
     return getInstruction(value, WITH);
   }
 
-  private static JsonObject include(final JsonObject json, final Map<String, JsonObject> loaded) {
-    final Pair<Stream<JsonValue>, JsonObject> included = loadIncluded(json, loaded);
+  private static JsonObject include(
+      final JsonObject json, final Map<String, JsonObject> loaded, final File baseDirectory) {
+    final Pair<Stream<JsonValue>, JsonObject> included = loadIncluded(json, loaded, baseDirectory);
 
     return createObjectBuilder(json)
         .remove(INCLUDE)
@@ -306,35 +323,42 @@ public class Validator {
     return getRef(value).isPresent();
   }
 
+  private static boolean isResource(final String ref) {
+    return ref.startsWith(RESOURCE);
+  }
+
   private static boolean isWith(final JsonValue value) {
     return getWith(value).isPresent();
   }
 
-  private static JsonObject load(final Reader reader, final Map<String, JsonObject> loaded) {
-    final JsonObject json =
-        include(
-            tryToGetWithRethrow(() -> createReader(reader), JsonReader::readObject).orElse(null),
-            loaded);
-
-    return transform(json, expand(json).thenApply(resolver(loaded)).thenApply(REMOVER));
+  private static JsonObject load(
+      final Reader reader, final Map<String, JsonObject> loaded, final File baseDirectory) {
+    return resolve(
+        tryToGetWithRethrow(() -> createReader(reader), JsonReader::readObject).orElse(null),
+        loaded,
+        baseDirectory);
   }
 
-  private static JsonObject load(final InputStream in, final Map<String, JsonObject> loaded) {
-    return load(new InputStreamReader(in, UTF_8), loaded);
+  private static JsonObject load(
+      final InputStream in, final Map<String, JsonObject> loaded, final File baseDirectory) {
+    return load(new InputStreamReader(in, UTF_8), loaded, baseDirectory);
   }
 
   private static JsonObject load(final File file, final Map<String, JsonObject> loaded) {
-    return load(tryToGetRethrow(() -> new FileInputStream(file)).orElse(null), loaded);
+    return load(
+        tryToGetRethrow(() -> new FileInputStream(file)).orElse(null),
+        loaded,
+        file.getParentFile());
   }
 
   private static JsonObject load(final String resource, final Map<String, JsonObject> loaded) {
-    return load(Validator.class.getResourceAsStream(resource), loaded);
+    return load(Validator.class.getResourceAsStream(resource), loaded, null);
   }
 
   private static Pair<Stream<JsonValue>, JsonObject> loadIncluded(
-      final JsonObject json, final Map<String, JsonObject> loaded) {
+      final JsonObject json, final Map<String, JsonObject> loaded, final File baseDirectory) {
     return getStrings(json, INCLUDE)
-        .map(ref -> loadRef(ref, loaded))
+        .map(ref -> loadRef(ref, loaded, baseDirectory))
         .map(
             ref ->
                 pair(
@@ -346,18 +370,24 @@ public class Validator {
             (r1, r2) -> r1);
   }
 
-  private static JsonObject loadRef(final String ref, final Map<String, JsonObject> loaded) {
-    return ofNullable(loaded.get(ref))
+  private static JsonObject loadRef(
+      final String ref, final Map<String, JsonObject> loaded, final File baseDirectory) {
+    final String realRef =
+        isResource(ref) || baseDirectory == null
+            ? ref
+            : new File(baseDirectory, ref).getAbsolutePath();
+
+    return ofNullable(loaded.get(realRef))
         .orElseGet(
             () ->
                 SideEffect.<JsonObject>run(
                         () ->
                             loaded.put(
-                                ref,
-                                ref.startsWith(RESOURCE)
-                                    ? load(ref.substring(RESOURCE.length()), loaded)
-                                    : load(new File(ref), loaded)))
-                    .andThenGet(() -> loaded.get(ref)));
+                                realRef,
+                                isResource(ref)
+                                    ? load(resourcePath(ref), loaded)
+                                    : load(new File(realRef), loaded)))
+                    .andThenGet(() -> loaded.get(realRef)));
   }
 
   private static boolean parentExists(final JsonValue json, final String path) {
@@ -368,13 +398,28 @@ public class Validator {
         || getValue(json.asJsonObject(), parent).isPresent();
   }
 
-  private static Transformer resolver(final Map<String, JsonObject> loaded) {
+  private static JsonObject resolve(
+      final JsonObject specification,
+      final Map<String, JsonObject> loaded,
+      final File baseDirectory) {
+    final JsonObject json = include(specification, loaded, baseDirectory);
+
+    return transform(
+        json, expand(json).thenApply(resolver(loaded, baseDirectory)).thenApply(REMOVER));
+  }
+
+  private static Transformer resolver(
+      final Map<String, JsonObject> loaded, final File baseDirectory) {
     return new Transformer(
         entry -> isRef(entry.value),
         entry ->
             Optional.of(entry.value.asJsonObject().getString(REF))
-                .map(ref -> loadRef(ref, loaded))
+                .map(ref -> loadRef(ref, loaded, baseDirectory))
                 .map(ref -> new JsonEntry(entry.path, ref)));
+  }
+
+  private static String resourcePath(final String ref) {
+    return ref.substring(RESOURCE.length());
   }
 
   private static JsonObject strip(final JsonObject condition) {
@@ -402,7 +447,9 @@ public class Validator {
             .orElseGet(
                 () ->
                     SideEffect.<Condition>run(
-                            () -> conditionCache.put(condition, generateCondition(condition)))
+                            () ->
+                                conditionCache.put(
+                                    condition, generateCondition(condition, features)))
                         .andThenGet(() -> conditionCache.get(condition)));
 
     return (json, path) -> c.apply(json, getPath(condition, path));
@@ -433,7 +480,7 @@ public class Validator {
                 .apply(j -> c.stream().flatMap(condition -> condition.apply(j, path)));
   }
 
-  private Condition generateCondition(final JsonObject condition) {
+  private Condition generateCondition(final JsonObject condition, final Features features) {
     return ofNullable(getField(condition))
         .flatMap(
             field -> getValue(condition, toJsonPointer(field)).map(value -> pair(field, value)))
@@ -443,7 +490,57 @@ public class Validator {
                 isConditions(pair.second)
                     ? conditions(pair.first, pair.second.asJsonObject())
                     : conditionArray(pair.first, pair.second.asJsonArray()))
-        .orElseGet(() -> condition(condition, condition.getString(CODE, null)));
+        .orElseGet(() -> condition(condition, condition.getString(CODE, null), features));
+  }
+
+  /**
+   * Loads and resolves a validation specification.
+   *
+   * @param source either a filename or a class path resource, in which case <code>source</code>
+   *     should start with "resource:".
+   * @return The specification.
+   * @since 1.4.1
+   */
+  public JsonObject load(final String source) {
+    return load(source, (File) null);
+  }
+
+  /**
+   * Loads and resolves a validation specification.
+   *
+   * @param source either a filename or a class path resource, in which case <code>source</code>
+   *     should start with "resource:".
+   * @param baseDirectory the directory to resolve relative file references with. It may be <code>
+   *     null</code>.
+   * @return The specification.
+   * @since 1.4.1
+   */
+  public JsonObject load(final String source, final File baseDirectory) {
+    return loadRef(source, loaded, baseDirectory);
+  }
+
+  /**
+   * When a validation specification includes other specifications they are resolved recursively.
+   *
+   * @param specification the validation specification.
+   * @return the resolved validation specification.
+   * @since 1.4.1
+   */
+  public JsonObject resolve(final JsonObject specification) {
+    return resolve(specification, (File) null);
+  }
+
+  /**
+   * When a validation specification includes other specifications they are resolved recursively.
+   *
+   * @param specification the validation specification.
+   * @param baseDirectory the directory to resolve relative file references with. It may be <code>
+   *     null</code>.
+   * @return the resolved validation specification.
+   * @since 1.4.1
+   */
+  public JsonObject resolve(final JsonObject specification, final File baseDirectory) {
+    return resolve(specification, loaded, baseDirectory);
   }
 
   /**
@@ -456,7 +553,19 @@ public class Validator {
    * @since 1.3
    */
   public Function<JsonObject, JsonArray> validator(final String source) {
-    final Condition conditions = conditions(null, loadRef(source, loaded));
+    return validator(loadRef(source, loaded, isResource(source) ? null : new File(source)));
+  }
+
+  /**
+   * Generates a validator with the specification, which should be fully resolved.
+   *
+   * @param specification the validation specification.
+   * @return An array with the fields <code>location</code>, which is a JSON pointer, and <code>code
+   *     </code>, which is the value of the <code>$code</code> field in the specification.
+   * @since 1.4.1
+   */
+  public Function<JsonObject, JsonArray> validator(final JsonObject specification) {
+    final Condition conditions = conditions(null, specification);
 
     return json ->
         conditions

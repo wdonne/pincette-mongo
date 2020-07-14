@@ -15,16 +15,17 @@ import javax.json.JsonValue;
 class Booleans {
   private Booleans() {}
 
-  static Implementation and(final JsonValue value) {
-    return combine(value, true, (r, v) -> r && !isFalse(v));
+  static Implementation and(final JsonValue value, final Features features) {
+    return combine(value, true, (r, v) -> r && !isFalse(v), features);
   }
 
   @SuppressWarnings("java:S4276") // For type inference.
   private static Implementation combine(
       final JsonValue value,
       final boolean initial,
-      final BiFunction<Boolean, JsonValue, Boolean> combiner) {
-    final List<Implementation> implementations = implementations(value);
+      final BiFunction<Boolean, JsonValue, Boolean> combiner,
+      final Features features) {
+    final List<Implementation> implementations = implementations(value, features);
 
     return (json, vars) ->
         applyImplementations(implementations, json, vars)
@@ -37,12 +38,12 @@ class Booleans {
     return isFalse(value) ? TRUE : FALSE;
   }
 
-  static Implementation or(final JsonValue value) {
-    return combine(value, false, (r, v) -> r || !isFalse(v));
+  static Implementation or(final JsonValue value, final Features features) {
+    return combine(value, false, (r, v) -> r || !isFalse(v), features);
   }
 
-  static Implementation not(final JsonValue value) {
-    final List<Implementation> implementations = implementations(value);
+  static Implementation not(final JsonValue value, final Features features) {
+    final List<Implementation> implementations = implementations(value, features);
 
     return (json, vars) ->
         applyImplementationsNum(implementations, json, vars, 1)
