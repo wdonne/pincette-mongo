@@ -476,7 +476,7 @@ public class JsonClient {
    */
   public static Publisher<JsonObject> findPublisher(
       final MongoCollection<Document> collection, final JsonObject filter) {
-    return findPublisher(collection, null, filter != null ? fromJson(filter) : null, null);
+    return findPublisher(collection, filter != null ? fromJson(filter) : null, null);
   }
 
   /**

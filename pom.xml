@@ -7,7 +7,7 @@
   <groupId>net.pincette</groupId>
   <artifactId>pincette-mongo</artifactId>
   <packaging>jar</packaging>
-  <version>2.0</version>
+  <version>2.0.1</version>
   <name>pincette-mongo</name>
   <description>MongoDB Utilities</description>
   <url>https://github.com/wdonne/pincette-mongo</url>
@@ -52,12 +52,12 @@
     <dependency>
       <groupId>org.mongodb</groupId>
       <artifactId>bson</artifactId>
-      <version>4.0.4</version>
+      <version>4.0.5</version>
     </dependency>
     <dependency>
       <groupId>org.mongodb</groupId>
       <artifactId>mongodb-driver-reactivestreams</artifactId>
-      <version>4.0.4</version>
+      <version>4.0.5</version>
     </dependency>
     <dependency>
       <groupId>javax.json</groupId>
@@ -67,7 +67,7 @@
     <dependency>
       <groupId>net.pincette</groupId>
       <artifactId>pincette-rs</artifactId>
-      <version>1.4.1</version>
+      <version>1.5</version>
     </dependency>
     <dependency>
       <groupId>net.pincette</groupId>
