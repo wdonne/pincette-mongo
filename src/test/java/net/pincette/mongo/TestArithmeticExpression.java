@@ -73,6 +73,14 @@ public class TestArithmeticExpression {
         v(4),
         function(o(f("$divide", a(v("$test1"), v("$test2")))))
             .apply(o(f("test1", v(9)), f("test2", v(3)))));
+    assertEquals(
+        v(0.3333333333333333),
+        function(o(f("$divide", a(v("$test1"), v("$test2")))))
+            .apply(o(f("test1", v(1)), f("test2", v(3)))));
+    assertEquals(
+        v(2.666666666666667),
+        function(o(f("$divide", a(v("$test1"), v("$test2")))))
+            .apply(o(f("test1", v(160)), f("test2", v(60)))));
   }
 
   @Test
@@ -172,6 +180,8 @@ public class TestArithmeticExpression {
     assertEquals(v(25), function(o(f("$pow", a(v(5), v(2))))).apply(o()));
     assertEquals(v(0.04), function(o(f("$pow", a(v(5), v(-2))))).apply(o()));
     assertEquals(v(null), function(o(f("$pow", a(v(-5))))).apply(o()));
+    assertEquals(v(1), function(o(f("$pow", a(v(5), v(0.1))))).apply(o()));
+    assertEquals(v(0.2), function(o(f("$pow", a(v(5), v(-1))))).apply(o()));
     assertNotEquals(v(1), function(o(f("$pow", a(v(100), v(10))))).apply(o()));
     assertEquals(
         v(125),

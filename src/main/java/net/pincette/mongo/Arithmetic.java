@@ -19,6 +19,7 @@ import static net.pincette.mongo.Expression.math;
 import static net.pincette.mongo.Expression.mathTwo;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -29,6 +30,8 @@ import javax.json.JsonValue;
 import net.pincette.json.JsonUtil;
 
 class Arithmetic {
+  private static final MathContext PRECISION = new MathContext(16);
+
   private Arithmetic() {}
 
   static Implementation abs(final JsonValue value, final Features features) {
@@ -64,7 +67,7 @@ class Arithmetic {
   }
 
   static Implementation divide(final JsonValue value, final Features features) {
-    return bigMathTwo(value, BigDecimal::divide, false, features);
+    return bigMathTwo(value, (v1, v2) -> v1.divide(v2, PRECISION), false, features);
   }
 
   static Implementation exp(final JsonValue value, final Features features) {
@@ -117,7 +120,7 @@ class Arithmetic {
   }
 
   private static BigDecimal pow(final BigDecimal value, final int exp) {
-    return exp < 0 ? new BigDecimal(1).divide(value.pow(Math.abs(exp))) : value.pow(exp);
+    return exp < 0 ? new BigDecimal(1).divide(value.pow(Math.abs(exp)), PRECISION) : value.pow(exp);
   }
 
   static Implementation round(final JsonValue value, final Features features) {
