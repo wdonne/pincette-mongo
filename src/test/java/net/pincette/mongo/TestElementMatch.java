@@ -13,10 +13,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-public class TestElementMatch {
+class TestElementMatch {
   @Test
   @DisplayName("$exists")
-  public void existsTest() {
+  void existsTest() {
     assertTrue(predicate(exists("test", true)).test(o(f("test", v(0)))));
     assertFalse(predicate(exists("test", true)).test(o(f("test2", v(0)))));
     assertTrue(predicate(exists("test", false)).test(o(f("test2", v(0)))));
@@ -25,7 +25,7 @@ public class TestElementMatch {
 
   @Test
   @DisplayName("$type")
-  public void typeTest() {
+  void typeTest() {
     assertTrue(predicate(type("test", "array")).test(o(f("test", a(v(0))))));
     assertFalse(predicate(type("test", "array")).test(o(f("test", v(0)))));
     assertTrue(predicate(type("test", "bool")).test(o(f("test", v(true)))));

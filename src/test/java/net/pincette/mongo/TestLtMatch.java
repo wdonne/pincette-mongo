@@ -13,22 +13,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-public class TestLtMatch {
+class TestLtMatch {
   @Test
   @DisplayName("$lt arrays")
-  public void arrays() {
+  void arrays() {
     assertFalse(predicate(lt("test", fromJson(a(v("test"), v(0))))).test(o(f("test", v(0)))));
   }
 
   @Test
   @DisplayName("$lt objects")
-  public void objects() {
+  void objects() {
     assertFalse(predicate(lt("test", fromJson(o(f("test", v(0)))))).test(o(f("test", v(0)))));
   }
 
   @Test
   @DisplayName("$lt values")
-  public void values() {
+  void values() {
     assertTrue(predicate(lt("test", 1)).test(o(f("test", v(0)))));
     assertFalse(predicate(lt("test", 0)).test(o(f("test", v(0)))));
     assertFalse(predicate(lt("test", 0)).test(o(f("test", v(null)))));

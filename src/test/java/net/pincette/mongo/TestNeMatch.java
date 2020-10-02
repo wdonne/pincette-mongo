@@ -12,14 +12,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import javax.json.JsonArray;
 import javax.json.JsonObject;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-public class TestNeMatch {
+class TestNeMatch {
   @Test
   @DisplayName("$ne arrays")
-  public void arrays() {
+  void arrays() {
     final JsonArray a1 = a(v(0), v("test"), o(f("test", v(0))));
     final JsonArray a2 = a(v(0), v("test"), o(f("test", v(1))));
 
@@ -29,7 +28,7 @@ public class TestNeMatch {
 
   @Test
   @DisplayName("$ne objects")
-  public void objects() {
+  void objects() {
     final JsonObject o1 = o(f("test", v(0)));
     final JsonObject o2 = o(f("test", v(1)));
 
@@ -39,7 +38,7 @@ public class TestNeMatch {
 
   @Test
   @DisplayName("$ne values")
-  public void values() {
+  void values() {
     assertFalse(predicate(ne("test", 0)).test(o(f("test", v(0)))));
     assertTrue(predicate(ne("test", 0)).test(o(f("test", v(1)))));
     assertTrue(predicate(ne("test", 0)).test(o(f("test", v(null)))));

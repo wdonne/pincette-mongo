@@ -15,10 +15,10 @@ import javax.json.JsonObject;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-public class TestEqMatch {
+class TestEqMatch {
   @Test
   @DisplayName("$eq arrays")
-  public void arrays() {
+  void arrays() {
     final JsonArray a1 = a(v(0), v("test"), o(f("test", v(0))));
     final JsonArray a2 = a(v(0), v("test"), o(f("test", v(1))));
 
@@ -28,7 +28,7 @@ public class TestEqMatch {
 
   @Test
   @DisplayName("$eq objects")
-  public void objects() {
+  void objects() {
     final JsonObject o1 = o(f("test", v(0)));
     final JsonObject o2 = o(f("test", v(1)));
 
@@ -38,7 +38,7 @@ public class TestEqMatch {
 
   @Test
   @DisplayName("$eq values")
-  public void values() {
+  void values() {
     assertTrue(predicate(eq("test", 0)).test(o(f("test", v(0)))));
     assertFalse(predicate(eq("test", 0)).test(o(f("test2", v(0)))));
     assertFalse(predicate(eq("test", 0)).test(o(f("test", v(1)))));

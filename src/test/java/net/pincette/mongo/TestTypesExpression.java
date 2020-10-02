@@ -10,10 +10,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-public class TestTypesExpression {
+class TestTypesExpression {
   @Test
   @DisplayName("$convert")
-  public void convert() {
+  void convert() {
     assertEquals(
         v(true), function(o(f("$convert", o(f("input", v(1)), f("to", v("bool")))))).apply(o()));
     assertEquals(
@@ -33,7 +33,7 @@ public class TestTypesExpression {
 
   @Test
   @DisplayName("$toBool")
-  public void toBool() {
+  void toBool() {
     assertEquals(v(true), function(o(f("$toBool", v(true)))).apply(o()));
     assertEquals(v(true), function(o(f("$toBool", v(1)))).apply(o()));
     assertEquals(v(true), function(o(f("$toBool", v("a")))).apply(o()));
@@ -46,7 +46,7 @@ public class TestTypesExpression {
 
   @Test
   @DisplayName("$toDecimal")
-  public void toDecimal() {
+  void toDecimal() {
     assertEquals(v(1), function(o(f("$toDecimal", v(1)))).apply(o()));
     assertEquals(v(1.0), function(o(f("$toDecimal", v(1.0)))).apply(o()));
     assertEquals(v(1.0), function(o(f("$toDecimal", v("1.0")))).apply(o()));
@@ -57,7 +57,7 @@ public class TestTypesExpression {
 
   @Test
   @DisplayName("$toDouble")
-  public void toDouble() {
+  void toDouble() {
     assertEquals(v(1), function(o(f("$toDouble", v(1)))).apply(o()));
     assertEquals(v(1.0), function(o(f("$toDouble", v(1.0)))).apply(o()));
     assertEquals(v(1.0), function(o(f("$toDouble", v("1.0")))).apply(o()));
@@ -68,7 +68,7 @@ public class TestTypesExpression {
 
   @Test
   @DisplayName("$toInt")
-  public void toInt() {
+  void toInt() {
     assertEquals(v(1), function(o(f("$toInt", v(1)))).apply(o()));
     assertEquals(v(1), function(o(f("$toInt", v(1.0)))).apply(o()));
     assertEquals(v(1), function(o(f("$toInt", v("1.0")))).apply(o()));
@@ -79,7 +79,7 @@ public class TestTypesExpression {
 
   @Test
   @DisplayName("$toLong")
-  public void toLong() {
+  void toLong() {
     assertEquals(v(1), function(o(f("$toLong", v(1)))).apply(o()));
     assertEquals(v(1), function(o(f("$toLong", v(1.0)))).apply(o()));
     assertEquals(v(1), function(o(f("$toLong", v("1.0")))).apply(o()));
@@ -90,7 +90,7 @@ public class TestTypesExpression {
 
   @Test
   @DisplayName("$toString")
-  public void toStringTest() {
+  void toStringTest() {
     assertEquals(v("1"), function(o(f("$toString", v(1)))).apply(o()));
     assertEquals(v("1.0"), function(o(f("$toString", v(1.0)))).apply(o()));
     assertEquals(v("1.0"), function(o(f("$toString", v("1.0")))).apply(o()));
@@ -101,7 +101,7 @@ public class TestTypesExpression {
 
   @Test
   @DisplayName("$type")
-  public void type() {
+  void type() {
     assertEquals(v("bool"), function(o(f("$type", v(true)))).apply(o()));
     assertEquals(v("bool"), function(o(f("$type", v(false)))).apply(o()));
     assertEquals(v("string"), function(o(f("$type", v("a")))).apply(o()));

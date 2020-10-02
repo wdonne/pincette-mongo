@@ -11,10 +11,10 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-public class TestArraysExpression {
+class TestArraysExpression {
   @Test
   @DisplayName("$arrayElemAt")
-  public void arrayElemAt() {
+  void arrayElemAt() {
     assertEquals(
         v(2),
         function(o(f("$arrayElemAt", a(v("$test"), v(2)))))
@@ -35,7 +35,7 @@ public class TestArraysExpression {
 
   @Test
   @DisplayName("$arrayToObject")
-  public void arrayToObject() {
+  void arrayToObject() {
     assertEquals(
         o(f("test1", v(0)), f("test2", v(1))),
         function(o(f("$arrayToObject", v("$test"))))
@@ -58,7 +58,7 @@ public class TestArraysExpression {
 
   @Test
   @DisplayName("$concatArrays")
-  public void concatArrays() {
+  void concatArrays() {
     assertEquals(
         a(v(0), v(1), v(2), v(3)),
         function(o(f("$concatArrays", a(v("$test1"), v("$test2")))))
@@ -75,14 +75,14 @@ public class TestArraysExpression {
 
   @Test
   @DisplayName("$elemMatch")
-  public void elemMatch() {
+  void elemMatch() {
     assertEquals(
         v(1), function(o(f("$elemMatch", a(a(v(0), v(1)), o(f("$gt", v(0))))))).apply(o()));
   }
 
   @Test
   @DisplayName("$filter")
-  public void filter() {
+  void filter() {
     assertEquals(
         a(v(1), v(2)),
         function(
@@ -102,7 +102,7 @@ public class TestArraysExpression {
 
   @Test
   @DisplayName("$in")
-  public void in() {
+  void in() {
     assertEquals(
         v(true),
         function(o(f("$in", a(v("$test1"), v("$test2")))))
@@ -115,7 +115,7 @@ public class TestArraysExpression {
 
   @Test
   @DisplayName("$indexOfArray")
-  public void indexOfArray() {
+  void indexOfArray() {
     assertEquals(
         v(1),
         function(o(f("$indexOfArray", a(v("$test1"), v("$test2")))))
@@ -167,14 +167,14 @@ public class TestArraysExpression {
 
   @Test
   @DisplayName("$isArray")
-  public void isArray() {
+  void isArray() {
     assertEquals(v(true), function(o(f("$isArray", v("$test")))).apply(o(f("test", a(v(0))))));
     assertEquals(v(false), function(o(f("$isArray", v("$test")))).apply(o(f("test", v(0)))));
   }
 
   @Test
   @DisplayName("$map")
-  public void map() {
+  void map() {
     assertEquals(
         a(v(2), v(4), v(6)),
         function(
@@ -212,7 +212,7 @@ public class TestArraysExpression {
 
   @Test
   @DisplayName("$objectToArray")
-  public void objectToArray() {
+  void objectToArray() {
     assertEquals(
         a(
             o(f("k", v("test1")), f("v", v(0))),
@@ -227,7 +227,7 @@ public class TestArraysExpression {
 
   @Test
   @DisplayName("$range")
-  public void range() {
+  void range() {
     assertEquals(
         a(v(0), v(1), v(2), v(3), v(4)),
         function(o(f("$range", a(v("$test1"), v("$test2")))))
@@ -248,7 +248,7 @@ public class TestArraysExpression {
 
   @Test
   @DisplayName("$reduce")
-  public void reduce() {
+  void reduce() {
     assertEquals(
         o(f("sum", v(15)), f("product", v(48))),
         function(
@@ -293,7 +293,7 @@ public class TestArraysExpression {
 
   @Test
   @DisplayName("$reverseArray")
-  public void reverseArray() {
+  void reverseArray() {
     assertEquals(
         a(v(2), v(1), v(0)),
         function(o(f("$reverseArray", v("$test")))).apply(o(f("test", a(v(0), v(1), v(2))))));
@@ -302,7 +302,7 @@ public class TestArraysExpression {
 
   @Test
   @DisplayName("$size")
-  public void size() {
+  void size() {
     assertEquals(v(2), function(o(f("$size", v("$test")))).apply(o(f("test", a(v(0), v(1))))));
     assertEquals(v(0), function(o(f("$size", v("$test")))).apply(o(f("test", a()))));
     assertEquals(v(null), function(o(f("$size", v("$test")))).apply(o(f("test2", a()))));
@@ -310,7 +310,7 @@ public class TestArraysExpression {
 
   @Test
   @DisplayName("$slice")
-  public void slice() {
+  void slice() {
     assertEquals(
         a(v(0)),
         function(o(f("$slice", a(v("$test1"), v("$test2")))))
@@ -343,7 +343,7 @@ public class TestArraysExpression {
 
   @Test
   @DisplayName("$sort")
-  public void sort() {
+  void sort() {
     assertEquals(
         a(v(0), v(1), v(2)),
         function(o(f("$sort", o(f("input", a(v(1), v(2), v(0))))))).apply(o()));
@@ -369,7 +369,7 @@ public class TestArraysExpression {
 
   @Test
   @DisplayName("$zip")
-  public void zip() {
+  void zip() {
     assertEquals(
         a(a(v(1), v("a")), a(v(2), v("b")), a(v(3), v("c"))),
         function(o(f("$zip", o(f("inputs", a(a(v(1), v(2), v(3)), a(v("a"), v("b"), v("c"))))))))

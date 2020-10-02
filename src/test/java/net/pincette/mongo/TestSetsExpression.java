@@ -10,10 +10,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-public class TestSetsExpression {
+class TestSetsExpression {
   @Test
   @DisplayName("$allElementsTrue")
-  public void allElementsTrue() {
+  void allElementsTrue() {
     assertEquals(
         v(true),
         function(o(f("$allElementsTrue", a(v("$test1"), v("$test2")))))
@@ -42,7 +42,7 @@ public class TestSetsExpression {
 
   @Test
   @DisplayName("$anyElementsTrue")
-  public void anyElementsTrue() {
+  void anyElementsTrue() {
     assertEquals(
         v(true),
         function(o(f("$anyElementsTrue", a(v("$test1"), v("$test2")))))
@@ -71,7 +71,7 @@ public class TestSetsExpression {
 
   @Test
   @DisplayName("$setDifference")
-  public void setDifference() {
+  void setDifference() {
     assertEquals(
         a(v(0)),
         function(o(f("$setDifference", a(v("$test1"), v("$test2")))))
@@ -84,7 +84,7 @@ public class TestSetsExpression {
 
   @Test
   @DisplayName("$setEquals")
-  public void setEquals() {
+  void setEquals() {
     assertEquals(
         v(true),
         function(o(f("$setEquals", a(v("$test1"), v("$test2"), v("$test3"), v("$test4")))))
@@ -111,7 +111,7 @@ public class TestSetsExpression {
 
   @Test
   @DisplayName("$setIntersection")
-  public void setIntersection() {
+  void setIntersection() {
     assertEquals(
         a(v("a")),
         function(o(f("$setIntersection", a(v("$test1"), v("$test2"), v("$test3"), v("$test4")))))
@@ -136,7 +136,7 @@ public class TestSetsExpression {
 
   @Test
   @DisplayName("$setIsSubset")
-  public void setIsSubset() {
+  void setIsSubset() {
     assertEquals(
         v(true),
         function(o(f("$setIsSubset", a(v("$test1"), v("$test2")))))
@@ -161,7 +161,7 @@ public class TestSetsExpression {
 
   @Test
   @DisplayName("$setUnion")
-  public void setUnion() {
+  void setUnion() {
     assertEquals(
         a(v("a"), v("b"), v("c")),
         function(o(f("$setUnion", a(v("$test1"), v("$test2"), v("$test3"), v("$test4")))))

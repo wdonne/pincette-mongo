@@ -16,11 +16,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-public class TestLogicalMatch {
+class TestLogicalMatch {
   @Test
   @DisplayName("$and")
   @SuppressWarnings("java:S1192")
-  public void andTest() {
+  void andTest() {
     assertTrue(
         predicate(and(gt("test1", 0), lt("test2", 0)))
             .test(o(f("test1", v(1)), f("test2", v(-1)))));
@@ -32,7 +32,7 @@ public class TestLogicalMatch {
   @Test
   @DisplayName("$or")
   @SuppressWarnings("java:S1192")
-  public void orTest() {
+  void orTest() {
     assertTrue(
         predicate(or(gt("test1", 0), lt("test2", 0))).test(o(f("test1", v(1)), f("test2", v(1)))));
     assertFalse(
@@ -42,7 +42,7 @@ public class TestLogicalMatch {
   @Test
   @DisplayName("$nor")
   @SuppressWarnings("java:S1192")
-  public void norTest() {
+  void norTest() {
     assertTrue(
         predicate(nor(gt("test1", 0), lt("test2", 0)))
             .test(o(f("test1", v(-1)), f("test2", v(1)))));
@@ -54,7 +54,7 @@ public class TestLogicalMatch {
   @Test
   @DisplayName("$not")
   @SuppressWarnings("java:S1192")
-  public void notTest() {
+  void notTest() {
     assertTrue(predicate(not(gt("test", 0))).test(o(f("test", v(0)))));
     assertFalse(predicate(not(gt("test", 0))).test(o(f("test", v(1)))));
   }

@@ -10,10 +10,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-public class TestCmpExpression {
+class TestCmpExpression {
   @Test
   @DisplayName("$cmp")
-  public void cmp() {
+  void cmp() {
     assertEquals(
         v(-1),
         function(o(f("$cmp", a(v("$test1.v"), v("$test2.v")))))

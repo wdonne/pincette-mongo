@@ -15,10 +15,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-public class TestArraysMatch {
+class TestArraysMatch {
   @Test
   @DisplayName("$all")
-  public void allTest() {
+  void allTest() {
     assertTrue(
         predicate(all("test", "test1", "test2")).test(o(f("test", a(v("test1"), v("test2"))))));
     assertTrue(
@@ -41,7 +41,7 @@ public class TestArraysMatch {
 
   @Test
   @DisplayName("$elemMatch")
-  public void elemMatchTest() {
+  void elemMatchTest() {
     assertTrue(
         predicate(elemMatch("test", fromJson(o(f("$gt", v(0)), f("$lt", v(2))))))
             .test(o(f("test", a(v(1))))));
@@ -58,7 +58,7 @@ public class TestArraysMatch {
 
   @Test
   @DisplayName("$size")
-  public void sizeTest() {
+  void sizeTest() {
     assertTrue(predicate(size("test", 2)).test(o(f("test", a(v(0), v(1))))));
     assertFalse(predicate(size("test", 1)).test(o(f("test", a(v(0), v(1))))));
   }

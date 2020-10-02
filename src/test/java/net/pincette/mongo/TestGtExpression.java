@@ -10,10 +10,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-public class TestGtExpression {
+class TestGtExpression {
   @Test
   @DisplayName("$gt arrays")
-  public void arrays() {
+  void arrays() {
     assertEquals(
         v(false),
         function(o(f("$gt", a(v("$test"), a(v("test"), v(0)))))).apply(o(f("test", v(0)))));
@@ -21,7 +21,7 @@ public class TestGtExpression {
 
   @Test
   @DisplayName("$gt objects")
-  public void objects() {
+  void objects() {
     assertEquals(
         v(false),
         function(o(f("$gt", a(v("$test"), o(f("$literal", o(f("test", v(0)))))))))
@@ -30,7 +30,7 @@ public class TestGtExpression {
 
   @Test
   @DisplayName("$gt values")
-  public void values() {
+  void values() {
     assertEquals(v(true), function(o(f("$gt", a(v("$test"), v(0))))).apply(o(f("test", v(1)))));
     assertEquals(v(false), function(o(f("$gt", a(v("$test"), v(0))))).apply(o(f("test", v(0)))));
     assertEquals(v(false), function(o(f("$gt", a(v("$test"), v(0))))).apply(o(f("test", v(null)))));

@@ -15,14 +15,13 @@ import static net.pincette.mongo.Match.predicate;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-public class TestEvaluationMatch {
+class TestEvaluationMatch {
   @Test
   @DisplayName("$expr")
-  public void exprTest() {
+  void exprTest() {
     assertTrue(
         predicate(expr(and(eq("test", 0), eq("test2", 1))))
             .test(o(f("test", v(0)), f("test2", v(1)))));
@@ -42,14 +41,14 @@ public class TestEvaluationMatch {
 
   @Test
   @DisplayName("$mod")
-  public void modTest() {
+  void modTest() {
     assertTrue(predicate(mod("test", 2, 0)).test(o(f("test", v(4)))));
     assertFalse(predicate(mod("test", 2, 0)).test(o(f("test", v(3)))));
   }
 
   @Test
   @DisplayName("$regex")
-  public void regexTest() {
+  void regexTest() {
     assertTrue(predicate(regex("test", "es")).test(o(f("test", v("test")))));
     assertTrue(predicate(o(f("test", o(f("$regex", v("es")))))).test(o(f("test", v("test")))));
     assertTrue(predicate(regex("test", "ES", "i")).test(o(f("test", v("test")))));
@@ -66,9 +65,10 @@ public class TestEvaluationMatch {
     assertFalse(predicate(o(f("test", o(f("$not", v("/es/")))))).test(o(f("test", v("test")))));
     assertTrue(
         predicate(
-            regex(
-                "test", "^([a-zA-Z0-9_\\-\\.]+)@((\\[[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.)|("
-                    + "([a-zA-Z0-9\\-]+\\.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\\]?)$"))
+                regex(
+                    "test",
+                    "^([a-zA-Z0-9_\\-\\.]+)@((\\[[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.)|("
+                        + "([a-zA-Z0-9\\-]+\\.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\\]?)$"))
             .test(o(f("test", v("Admin@re3.be")))));
   }
 }

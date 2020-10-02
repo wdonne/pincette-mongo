@@ -10,10 +10,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-public class TestBooleansExpression {
+class TestBooleansExpression {
   @Test
   @DisplayName("$and")
-  public void and() {
+  void and() {
     assertEquals(
         v(true),
         function(o(f("$and", a(v(true), v("$test"), v("test"))))).apply(o(f("test", v(true)))));
@@ -30,7 +30,7 @@ public class TestBooleansExpression {
 
   @Test
   @DisplayName("$not")
-  public void not() {
+  void not() {
     assertEquals(v(true), function(o(f("$not", a(v("$test"))))).apply(o(f("test", v(false)))));
     assertEquals(v(true), function(o(f("$not", a(v("$test"))))).apply(o(f("test", v(0)))));
     assertEquals(v(true), function(o(f("$not", a(v("$test"))))).apply(o(f("test", v(null)))));
@@ -41,7 +41,7 @@ public class TestBooleansExpression {
 
   @Test
   @DisplayName("$or")
-  public void or() {
+  void or() {
     assertEquals(
         v(true),
         function(o(f("$or", a(v(true), v("$test"), v("test"))))).apply(o(f("test", v(true)))));

@@ -450,7 +450,7 @@ public class JsonClient {
    * @since 2.0
    */
   public static Publisher<JsonObject> findPublisher(final MongoCollection<Document> collection) {
-    return findPublisher(collection, null, (Bson) null, null);
+    return findPublisher(collection, (Bson) null, null);
   }
 
   /**
@@ -463,7 +463,7 @@ public class JsonClient {
    */
   public static Publisher<JsonObject> findPublisher(
       final MongoCollection<Document> collection, final Bson filter) {
-    return findPublisher(collection, null, filter, null);
+    return findPublisher(collection, filter, null);
   }
 
   /**

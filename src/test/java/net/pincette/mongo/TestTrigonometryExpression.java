@@ -10,10 +10,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-public class TestTrigonometryExpression {
+class TestTrigonometryExpression {
   @Test
   @DisplayName("$acos")
-  public void acos() {
+  void acos() {
     assertEquals(
         v(60),
         function(o(f("$round", a(o(f("$radiansToDegrees", o(f("$acos", v(0.5))))), v(1)))))
@@ -23,7 +23,7 @@ public class TestTrigonometryExpression {
 
   @Test
   @DisplayName("$acosh")
-  public void acosh() {
+  void acosh() {
     assertEquals(
         v(101),
         function(o(f("$round", a(o(f("$radiansToDegrees", o(f("$acosh", v(3))))), v(1)))))
@@ -33,14 +33,14 @@ public class TestTrigonometryExpression {
 
   @Test
   @DisplayName("$asin")
-  public void asin() {
+  void asin() {
     assertEquals(v(90.0), function(o(f("$radiansToDegrees", o(f("$asin", v(1)))))).apply(o()));
     assertEquals(v(null), function(o(f("$asin", v(null)))).apply(o()));
   }
 
   @Test
   @DisplayName("$asinh")
-  public void asinh() {
+  void asinh() {
     assertEquals(
         v(50.5),
         function(o(f("$round", a(o(f("$radiansToDegrees", o(f("$asinh", v(1))))), v(1)))))
@@ -50,7 +50,7 @@ public class TestTrigonometryExpression {
 
   @Test
   @DisplayName("$atan")
-  public void atan() {
+  void atan() {
     assertEquals(
         v(45),
         function(o(f("$round", a(o(f("$radiansToDegrees", o(f("$atan", v(1))))), v(1)))))
@@ -60,7 +60,7 @@ public class TestTrigonometryExpression {
 
   @Test
   @DisplayName("$atan2")
-  public void atan2() {
+  void atan2() {
     assertEquals(
         v(53.1),
         function(o(f("$round", a(o(f("$radiansToDegrees", o(f("$atan2", a(v(4), v(3)))))), v(1)))))
@@ -70,7 +70,7 @@ public class TestTrigonometryExpression {
 
   @Test
   @DisplayName("$atanh")
-  public void atanh() {
+  void atanh() {
     assertEquals(
         v(31.5),
         function(o(f("$round", a(o(f("$radiansToDegrees", o(f("$atanh", v(0.5))))), v(1)))))
@@ -80,7 +80,7 @@ public class TestTrigonometryExpression {
 
   @Test
   @DisplayName("$cos")
-  public void cos() {
+  void cos() {
     assertEquals(
         v(0.5),
         function(o(f("$round", a(o(f("$cos", o(f("$degreesToRadians", v(60))))), v(1)))))
@@ -90,14 +90,14 @@ public class TestTrigonometryExpression {
 
   @Test
   @DisplayName("$sin")
-  public void sin() {
+  void sin() {
     assertEquals(v(1.0), function(o(f("$sin", o(f("$degreesToRadians", v(90)))))).apply(o()));
     assertEquals(v(null), function(o(f("$sin", v(null)))).apply(o()));
   }
 
   @Test
   @DisplayName("$tan")
-  public void tan() {
+  void tan() {
     assertEquals(
         v(1),
         function(o(f("$round", a(o(f("$tan", o(f("$degreesToRadians", v(45))))), v(1)))))

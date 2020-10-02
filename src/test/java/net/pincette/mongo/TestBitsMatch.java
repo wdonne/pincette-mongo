@@ -12,14 +12,13 @@ import static net.pincette.mongo.Match.predicate;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-public class TestBitsMatch {
+class TestBitsMatch {
   @Test
   @DisplayName("$bitsAllClear")
-  public void bitsAllClearTest() {
+  void bitsAllClearTest() {
     assertTrue(predicate(bitsAllClear("test", 2)).test(o(f("test", v(1)))));
     assertTrue(predicate(bitsAllClear("test", 10)).test(o(f("test", v(5)))));
     assertFalse(predicate(bitsAllClear("test", 10)).test(o(f("test", v(7)))));
@@ -31,7 +30,7 @@ public class TestBitsMatch {
 
   @Test
   @DisplayName("$bitsAllSet")
-  public void bitsAllSetTest() {
+  void bitsAllSetTest() {
     assertTrue(predicate(bitsAllSet("test", 2)).test(o(f("test", v(2)))));
     assertTrue(predicate(bitsAllSet("test", 10)).test(o(f("test", v(10)))));
     assertFalse(predicate(bitsAllSet("test", 10)).test(o(f("test", v(7)))));
@@ -44,7 +43,7 @@ public class TestBitsMatch {
 
   @Test
   @DisplayName("$bitsAnyClear")
-  public void bitsAnyClearTest() {
+  void bitsAnyClearTest() {
     assertTrue(predicate(bitsAnyClear("test", 3)).test(o(f("test", v(1)))));
     assertTrue(predicate(bitsAnyClear("test", 3)).test(o(f("test", v(2)))));
     assertTrue(predicate(bitsAnyClear("test", 10)).test(o(f("test", v(2)))));
@@ -57,7 +56,7 @@ public class TestBitsMatch {
 
   @Test
   @DisplayName("$bitsAnySet")
-  public void bitsAnySetTest() {
+  void bitsAnySetTest() {
     assertTrue(predicate(bitsAnySet("test", 3)).test(o(f("test", v(1)))));
     assertTrue(predicate(bitsAnySet("test", 3)).test(o(f("test", v(2)))));
     assertTrue(predicate(bitsAnySet("test", 10)).test(o(f("test", v(2)))));

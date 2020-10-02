@@ -13,10 +13,10 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-public class TestArithmeticExpression {
+class TestArithmeticExpression {
   @Test
   @DisplayName("$abs")
-  public void abs() {
+  void abs() {
     assertEquals(v(1), function(o(f("$abs", v(1)))).apply(o()));
     assertEquals(v(0), function(o(f("$abs", v(0)))).apply(o()));
     assertEquals(v(1), function(o(f("$abs", v(-1)))).apply(o()));
@@ -31,7 +31,7 @@ public class TestArithmeticExpression {
 
   @Test
   @DisplayName("$add")
-  public void add() {
+  void add() {
     assertEquals(v(4), function(o(f("$add", a(v(1), v(3))))).apply(o()));
     assertEquals(v(9), function(o(f("$add", a(v(1), v(3), v(5))))).apply(o()));
     assertEquals(
@@ -50,7 +50,7 @@ public class TestArithmeticExpression {
 
   @Test
   @DisplayName("$ceil")
-  public void ceil() {
+  void ceil() {
     assertEquals(v(1), function(o(f("$ceil", v(1)))).apply(o()));
     assertEquals(v(8), function(o(f("$ceil", v(7.5)))).apply(o()));
     assertEquals(v(-2), function(o(f("$ceil", v(-2.8)))).apply(o()));
@@ -61,7 +61,7 @@ public class TestArithmeticExpression {
 
   @Test
   @DisplayName("$divide")
-  public void divide() {
+  void divide() {
     assertEquals(v(0.5), function(o(f("$divide", a(v(1), v(2))))).apply(o()));
     assertEquals(v(3), function(o(f("$divide", a(v(9), v(3))))).apply(o()));
     assertNotEquals(v(0), function(o(f("$divide", a(v(-1), v(2))))).apply(o()));
@@ -85,7 +85,7 @@ public class TestArithmeticExpression {
 
   @Test
   @DisplayName("$exp")
-  public void exp() {
+  void exp() {
     assertEquals(v(1.0), function(o(f("$exp", v(0)))).apply(o()));
     assertEquals(v(7.38905609893065), function(o(f("$exp", v(2)))).apply(o()));
     assertNotEquals(v(2), function(o(f("$exp", v(0)))).apply(o()));
@@ -95,7 +95,7 @@ public class TestArithmeticExpression {
 
   @Test
   @DisplayName("$floor")
-  public void floor() {
+  void floor() {
     assertEquals(v(1), function(o(f("$floor", v(1)))).apply(o()));
     assertEquals(v(7), function(o(f("$floor", v(7.5)))).apply(o()));
     assertEquals(v(-3), function(o(f("$floor", v(-2.8)))).apply(o()));
@@ -106,7 +106,7 @@ public class TestArithmeticExpression {
 
   @Test
   @DisplayName("$ln")
-  public void ln() {
+  void ln() {
     assertEquals(v(0.0), function(o(f("$ln", v(1)))).apply(o()));
     assertEquals(v(1.0), function(o(f("$ln", v(E)))).apply(o()));
     assertEquals(v(2.302585092994046), function(o(f("$ln", v(10)))).apply(o()));
@@ -117,7 +117,7 @@ public class TestArithmeticExpression {
 
   @Test
   @DisplayName("$log")
-  public void log() {
+  void log() {
     assertEquals(v(2.0), function(o(f("$log", a(v(100), v(10))))).apply(o()));
     assertEquals(v(4.605170185988092), function(o(f("$log", a(v(100), v(E))))).apply(o()));
     assertNotEquals(v(0.0), function(o(f("$log", a(v(100), v(10))))).apply(o()));
@@ -133,7 +133,7 @@ public class TestArithmeticExpression {
 
   @Test
   @DisplayName("$log10")
-  public void log10() {
+  void log10() {
     assertEquals(v(2.0), function(o(f("$log10", v(100)))).apply(o()));
     assertNotEquals(v(0.0), function(o(f("$log10", v(100)))).apply(o()));
     assertEquals(v(2.0), function(o(f("$log10", v("$test")))).apply(o(f("test", v(100)))));
@@ -142,7 +142,7 @@ public class TestArithmeticExpression {
 
   @Test
   @DisplayName("$mod")
-  public void mod() {
+  void mod() {
     assertEquals(v(0), function(o(f("$mod", a(v(100), v(10))))).apply(o()));
     assertEquals(v(1), function(o(f("$mod", a(v(5), v(2))))).apply(o()));
     assertNotEquals(v(1), function(o(f("$mod", a(v(100), v(10))))).apply(o()));
@@ -158,7 +158,7 @@ public class TestArithmeticExpression {
 
   @Test
   @DisplayName("$multiply")
-  public void multiply() {
+  void multiply() {
     assertEquals(v(3), function(o(f("$multiply", a(v(1), v(3))))).apply(o()));
     assertEquals(v(15), function(o(f("$multiply", a(v(1), v(3), v(5))))).apply(o()));
     assertEquals(v(0.5), function(o(f("$multiply", a(v(0.5), v(1))))).apply(o()));
@@ -175,7 +175,7 @@ public class TestArithmeticExpression {
 
   @Test
   @DisplayName("$pow")
-  public void pow() {
+  void pow() {
     assertEquals(v(1), function(o(f("$pow", a(v(5), v(0))))).apply(o()));
     assertEquals(v(25), function(o(f("$pow", a(v(5), v(2))))).apply(o()));
     assertEquals(v(0.04), function(o(f("$pow", a(v(5), v(-2))))).apply(o()));
@@ -195,7 +195,7 @@ public class TestArithmeticExpression {
 
   @Test
   @DisplayName("$round")
-  public void round() {
+  void round() {
     assertEquals(v(6), function(o(f("$round", a(v(5.5))))).apply(o()));
     assertEquals(v(5), function(o(f("$round", a(v(5.1))))).apply(o()));
     assertEquals(v(1555.11), function(o(f("$round", a(v(1555.1111), v(2))))).apply(o()));
@@ -207,7 +207,7 @@ public class TestArithmeticExpression {
 
   @Test
   @DisplayName("$sqrt")
-  public void sqrt() {
+  void sqrt() {
     assertEquals(v(5.0), function(o(f("$sqrt", v(25)))).apply(o()));
     assertEquals(v(5.477225575051661), function(o(f("$sqrt", v(30)))).apply(o()));
     assertEquals(v(null), function(o(f("$sqrt", v(null)))).apply(o()));
@@ -215,7 +215,7 @@ public class TestArithmeticExpression {
 
   @Test
   @DisplayName("$subtract")
-  public void subtract() {
+  void subtract() {
     assertEquals(v(6), function(o(f("$subtract", a(v(12), v(6))))).apply(o()));
     assertNotEquals(v(5), function(o(f("$subtract", a(v(12), v(6))))).apply(o()));
     assertEquals(
@@ -232,7 +232,7 @@ public class TestArithmeticExpression {
 
   @Test
   @DisplayName("$trunc")
-  public void trunc() {
+  void trunc() {
     assertEquals(v(5), function(o(f("$trunc", a(v(5.5))))).apply(o()));
     assertEquals(v(5), function(o(f("$trunc", a(v(5.1))))).apply(o()));
     assertEquals(v(1555.11), function(o(f("$trunc", a(v(1555.1111), v(2))))).apply(o()));

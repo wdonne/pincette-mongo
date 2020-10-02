@@ -12,7 +12,7 @@ import javax.json.JsonObject;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-public class TestExpression {
+class TestExpression {
   private static void jslt(final String script) {
     assertEquals(
         o(f("f", v("v")), f("test", v("test"))),
@@ -22,19 +22,19 @@ public class TestExpression {
 
   @Test
   @DisplayName("$jslt 1")
-  public void jslt1() {
+  void jslt1() {
     jslt("resource:/test.jslt");
   }
 
   @Test
   @DisplayName("$jslt 2")
-  public void jslt2() {
+  void jslt2() {
     jslt("{\"test\": \"test\", *: .}");
   }
 
   @Test
   @DisplayName("$let")
-  public void let() {
+  void let() {
     assertEquals(
         v("test11test2test3"),
         function(
@@ -70,7 +70,7 @@ public class TestExpression {
 
   @Test
   @DisplayName("$literal")
-  public void literal() {
+  void literal() {
     final JsonArray a = a(v(0), v(1));
     final JsonObject o = o(f("$add", a));
 
@@ -81,7 +81,7 @@ public class TestExpression {
 
   @Test
   @DisplayName("$mergeObjects")
-  public void mergeObjects() {
+  void mergeObjects() {
     assertEquals(
         o(f("a", v(0)), f("b", v(1))),
         function(o(f("$mergeObjects", a(v("$test1"), v("$test2")))))
@@ -94,7 +94,7 @@ public class TestExpression {
 
   @Test
   @DisplayName("$objectToArray")
-  public void objectToArray() {
+  void objectToArray() {
     assertEquals(
         a(o(f("k", v("test1")), f("v", v(0))), o(f("k", v("test2")), f("v", v(1)))),
         function(o(f("$objectToArray", v("$test"))))
@@ -104,7 +104,7 @@ public class TestExpression {
 
   @Test
   @DisplayName("$unescape")
-  public void unescape() {
+  void unescape() {
     assertEquals(
         o(f("$eq", a(o(f("$gt", a(v(1), v(0))))))),
         function(o(f("$unescape", o(f("#$eq", a(o(f("#$gt", a(v(1), v(0)))))))))).apply(o()));
@@ -112,14 +112,14 @@ public class TestExpression {
 
   @Test
   @DisplayName("field value")
-  public void value() {
+  void value() {
     assertEquals(v(true), function(o(f("$eq", a(v("$test"), v(1))))).apply(o(f("test", v(1)))));
     assertEquals(v(true), function(o(f("$eq", a(v("$test2"), v(null))))).apply(o(f("test", v(1)))));
   }
 
   @Test
   @DisplayName("$$ROOT")
-  public void root() {
+  void root() {
     final JsonObject object = o(f("test", v(1)));
 
     assertEquals(object, function(v("$$ROOT")).apply(object));

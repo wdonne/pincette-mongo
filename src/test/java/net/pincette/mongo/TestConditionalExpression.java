@@ -10,10 +10,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-public class TestConditionalExpression {
+class TestConditionalExpression {
   @Test
   @DisplayName("$cond")
-  public void cond() {
+  void cond() {
     assertEquals(
         v(0),
         function(o(f("$cond", o(f("if", v("$test")), f("then", v(0)), f("else", v(1))))))
@@ -30,14 +30,14 @@ public class TestConditionalExpression {
 
   @Test
   @DisplayName("$ifNull")
-  public void ifNull() {
+  void ifNull() {
     assertEquals(v(0), function(o(f("$ifNull", a(v("$test"), v(1))))).apply(o(f("test", v(0)))));
     assertEquals(v(1), function(o(f("$ifNull", a(v("$test"), v(1))))).apply(o(f("test", v(null)))));
   }
 
   @Test
   @DisplayName("$switch")
-  public void switchTest() {
+  void switchTest() {
     assertEquals(
         v(0),
         function(

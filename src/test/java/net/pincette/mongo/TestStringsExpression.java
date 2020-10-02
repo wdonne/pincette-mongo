@@ -10,17 +10,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-public class TestStringsExpression {
+class TestStringsExpression {
   @Test
   @DisplayName("$concat")
-  public void concat() {
+  void concat() {
     assertEquals(v("abc"), function(o(f("$concat", a(v("a"), v("b"), v("c"))))).apply(o()));
     assertEquals(v(""), function(o(f("$concat", a()))).apply(o()));
   }
 
   @Test
   @DisplayName("$indexOfCP")
-  public void indexOfCP() {
+  void indexOfCP() {
     assertEquals(v(0), function(o(f("$indexOfCP", a(v("testing"), v("te"))))).apply(o()));
     assertEquals(v(1), function(o(f("$indexOfCP", a(v("testing"), v("es"))))).apply(o()));
     assertEquals(v(-1), function(o(f("$indexOfCP", a(v("testing"), v("tt"))))).apply(o()));
@@ -39,7 +39,7 @@ public class TestStringsExpression {
 
   @Test
   @DisplayName("$ltrim")
-  public void ltrim() {
+  void ltrim() {
     assertEquals(v("a "), function(o(f("$ltrim", o(f("input", v(" \t\na ")))))).apply(o()));
     assertEquals(
         v(" a "),
@@ -48,7 +48,7 @@ public class TestStringsExpression {
 
   @Test
   @DisplayName("$regexFind")
-  public void regexFind() {
+  void regexFind() {
     assertEquals(
         o(f("match", v("es")), f("idx", v(1)), f("captures", a())),
         function(o(f("$regexFind", o(f("input", v("test")), f("regex", v("es")))))).apply(o()));
@@ -83,7 +83,7 @@ public class TestStringsExpression {
 
   @Test
   @DisplayName("$regexFindAll")
-  public void regexFindAll() {
+  void regexFindAll() {
     assertEquals(
         a(o(f("match", v("es")), f("idx", v(1)), f("captures", a()))),
         function(o(f("$regexFindAll", o(f("input", v("test")), f("regex", v("es")))))).apply(o()));
@@ -125,7 +125,7 @@ public class TestStringsExpression {
 
   @Test
   @DisplayName("$regexMatch")
-  public void regexMatch() {
+  void regexMatch() {
     assertEquals(
         v(true),
         function(o(f("$regexMatch", o(f("input", v("test")), f("regex", v("es")))))).apply(o()));
@@ -164,7 +164,7 @@ public class TestStringsExpression {
 
   @Test
   @DisplayName("$rtrim")
-  public void rtrim() {
+  void rtrim() {
     assertEquals(v(" a"), function(o(f("$rtrim", o(f("input", v(" a\t\n ")))))).apply(o()));
     assertEquals(
         v(" a "),
@@ -173,7 +173,7 @@ public class TestStringsExpression {
 
   @Test
   @DisplayName("$split")
-  public void split() {
+  void split() {
     assertEquals(
         a(v("a"), v("b"), v("c")), function(o(f("$split", a(v("a,b,c"), v(","))))).apply(o()));
     assertEquals(a(v("a,b"), v("c")), function(o(f("$split", a(v("a,b, c"), v(", "))))).apply(o()));
@@ -184,7 +184,7 @@ public class TestStringsExpression {
 
   @Test
   @DisplayName("$strLenCP")
-  public void strLenCP() {
+  void strLenCP() {
     assertEquals(v(4), function(o(f("$strLenCP", v("test")))).apply(o()));
     assertEquals(v(4), function(o(f("$strLenCP", v("t\u00e9st")))).apply(o()));
     assertEquals(v(0), function(o(f("$strLenCP", v("")))).apply(o()));
@@ -192,7 +192,7 @@ public class TestStringsExpression {
 
   @Test
   @DisplayName("$strcasecmp")
-  public void strcasecmp() {
+  void strcasecmp() {
     assertEquals(v(-1), function(o(f("$strcasecmp", a(v("rest"), v("Test"))))).apply(o()));
     assertEquals(v(1), function(o(f("$strcasecmp", a(v("Test"), v("rest"))))).apply(o()));
     assertEquals(v(0), function(o(f("$strcasecmp", a(v("Test"), v("test"))))).apply(o()));
@@ -200,7 +200,7 @@ public class TestStringsExpression {
 
   @Test
   @DisplayName("$substrCP")
-  public void substrCP() {
+  void substrCP() {
     assertEquals(v("es"), function(o(f("$substrCP", a(v("test"), v(1), v(2))))).apply(o()));
     assertEquals(v("te"), function(o(f("$substrCP", a(v("test"), v(0), v(2))))).apply(o()));
     assertEquals(v("st"), function(o(f("$substrCP", a(v("test"), v(2), v(2))))).apply(o()));
@@ -209,7 +209,7 @@ public class TestStringsExpression {
 
   @Test
   @DisplayName("$toLower")
-  public void toLower() {
+  void toLower() {
     assertEquals(v("test"), function(o(f("$toLower", v("TEST")))).apply(o()));
     assertEquals(v("test"), function(o(f("$toLower", v("TesT")))).apply(o()));
     assertEquals(v(""), function(o(f("$toLower", v(null)))).apply(o()));
@@ -217,7 +217,7 @@ public class TestStringsExpression {
 
   @Test
   @DisplayName("$toUpper")
-  public void toUpper() {
+  void toUpper() {
     assertEquals(v("TEST"), function(o(f("$toUpper", v("TEST")))).apply(o()));
     assertEquals(v("TEST"), function(o(f("$toUpper", v("TesT")))).apply(o()));
     assertEquals(v(""), function(o(f("$toUpper", v(null)))).apply(o()));
@@ -225,7 +225,7 @@ public class TestStringsExpression {
 
   @Test
   @DisplayName("$trim")
-  public void trim() {
+  void trim() {
     assertEquals(v("a"), function(o(f("$trim", o(f("input", v(" \n\ta\t\n ")))))).apply(o()));
     assertEquals(
         v(" a "),

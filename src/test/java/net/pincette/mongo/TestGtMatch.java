@@ -13,22 +13,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-public class TestGtMatch {
+class TestGtMatch {
   @Test
   @DisplayName("$gt arrays")
-  public void arrays() {
+  void arrays() {
     assertFalse(predicate(gt("test", fromJson(a(v("test"), v(0))))).test(o(f("test", v(0)))));
   }
 
   @Test
   @DisplayName("$gt objects")
-  public void objects() {
+  void objects() {
     assertFalse(predicate(gt("test", fromJson(o(f("test", v(0)))))).test(o(f("test", v(0)))));
   }
 
   @Test
   @DisplayName("$gt values")
-  public void values() {
+  void values() {
     assertTrue(predicate(gt("test", 0)).test(o(f("test", v(1)))));
     assertFalse(predicate(gt("test", 0)).test(o(f("test", v(0)))));
     assertFalse(predicate(gt("test", 0)).test(o(f("test", v(null)))));
