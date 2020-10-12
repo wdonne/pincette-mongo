@@ -281,8 +281,7 @@ public class Match {
             () -> {
               final Predicate<JsonObject> predicate = predicateField(key, value, features);
 
-              return json ->
-                  predicate != null && isObject(json) && predicate.test(json.asJsonObject());
+              return json -> isObject(json) && predicate.test(json.asJsonObject());
             });
   }
 
@@ -627,7 +626,7 @@ public class Match {
                     COMBINERS.contains(key)
                         ? predicateCombiner(key, value.apply(key), features)
                         : predicateField(key, value.apply(key), features))
-            .orElse(json -> false),
+            .orElseGet(() -> predicateFields(unwrapped.first, features)),
         unwrapped.first,
         Boolean.TRUE.equals(unwrapped.second) ? INFO : FINEST);
   }
@@ -688,6 +687,15 @@ public class Match {
         isExpression(value) ? predicateValue(value.asJsonObject(), features) : eq(value);
 
     return json -> predicate.test(getValue(json, toJsonPointer(field)).orElse(null));
+  }
+
+  private static Predicate<JsonObject> predicateFields(
+      final JsonObject expression, final Features features) {
+    return expression.keySet().stream()
+        .filter(key -> !key.startsWith("$"))
+        .map(key -> predicateField(key, expression.getValue("/" + key), features))
+        .reduce((p1, p2) -> (json -> p1.test(json) && p2.test(json)))
+        .orElseGet(() -> (json -> false));
   }
 
   /**
