@@ -38,6 +38,7 @@ import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.codecs.BsonDocumentCodec;
 import org.bson.codecs.BsonValueCodecProvider;
+import org.bson.codecs.DocumentCodecProvider;
 import org.bson.codecs.EncoderContext;
 import org.bson.codecs.ValueCodecProvider;
 import org.bson.conversions.Bson;
@@ -172,7 +173,9 @@ public class BsonUtil {
 
   public static BsonDocument toBsonDocument(final Bson bson) {
     return bson.toBsonDocument(
-        BsonDocument.class, fromProviders(new BsonValueCodecProvider(), new ValueCodecProvider()));
+        BsonDocument.class,
+        fromProviders(
+            new BsonValueCodecProvider(), new ValueCodecProvider(), new DocumentCodecProvider()));
   }
 
   public static byte[] toBytes(final BsonDocument document) {

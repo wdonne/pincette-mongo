@@ -275,7 +275,7 @@ public class JsonClient {
   }
 
   /**
-   * Finds JSON objects that match <code>filter</code>.
+   * Finds all JSON objects.
    *
    * @param collection the MongoDB collection.
    * @return The list of objects.
@@ -312,7 +312,7 @@ public class JsonClient {
   }
 
   /**
-   * Finds JSON objects that match <code>filter</code>.
+   * Finds all JSON objects.
    *
    * @param collection the MongoDB collection.
    * @param session the MongoDB session.
@@ -355,7 +355,7 @@ public class JsonClient {
   }
 
   /**
-   * Finds JSON objects that match <code>filter</code>.
+   * Finds all JSON objects.
    *
    * @param collection the MongoDB collection.
    * @param setParameters a function to set the parameters for the result set.
@@ -443,7 +443,7 @@ public class JsonClient {
   }
 
   /**
-   * Finds JSON objects that match <code>filter</code>.
+   * Finds all JSON objects.
    *
    * @param collection the MongoDB collection.
    * @return The object publisher.
@@ -480,7 +480,7 @@ public class JsonClient {
   }
 
   /**
-   * Finds JSON objects that match <code>filter</code>.
+   * Finds all JSON objects.
    *
    * @param collection the MongoDB collection.
    * @param session the MongoDB session.
@@ -496,7 +496,7 @@ public class JsonClient {
   }
 
   /**
-   * Finds JSON objects that match <code>filter</code>.
+   * Finds all JSON objects.
    *
    * @param collection the MongoDB collection.
    * @param session the MongoDB session.
