@@ -22,6 +22,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
+import java.util.stream.Stream;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
@@ -684,8 +685,12 @@ public class JsonClient {
     return findOne(collection, session, fromJson(filter));
   }
 
-  private static List<? extends Bson> fromJsonArray(final JsonArray array) {
-    return array.stream().map(JsonValue::asJsonObject).map(BsonUtil::fromJson).collect(toList());
+  static List<Bson> fromJsonArray(final JsonArray array) {
+    return fromJsonStream(array.stream());
+  }
+
+  static List<Bson> fromJsonStream(final Stream<? extends JsonValue> stream) {
+    return stream.map(JsonValue::asJsonObject).map(BsonUtil::fromJson).collect(toList());
   }
 
   /**

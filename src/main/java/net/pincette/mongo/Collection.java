@@ -244,12 +244,32 @@ public class Collection {
     return exec(collection, c -> c.estimatedDocumentCount(options));
   }
 
-  private static <T, D> CompletionStage<T> exec(
+  /**
+   * Runs a collection operation with only one result.
+   *
+   * @param collection the given collection.
+   * @param op the collection operation.
+   * @param <T> the result type.
+   * @param <D> the document type.
+   * @return The completion stage with the result.
+   * @since 2.1
+   */
+  public static <T, D> CompletionStage<T> exec(
       final MongoCollection<D> collection, final Function<MongoCollection<D>, Publisher<T>> op) {
     return wrap(() -> op.apply(collection));
   }
 
-  private static <T, D> CompletionStage<List<T>> execList(
+  /**
+   * Runs a collection operation with more than one result.
+   *
+   * @param collection the given collection.
+   * @param op the collection operation.
+   * @param <T> the result type.
+   * @param <D> the document type.
+   * @return The completion stage with the result list.
+   * @since 2.1
+   */
+  public static <T, D> CompletionStage<List<T>> execList(
       final MongoCollection<D> collection, final Function<MongoCollection<D>, Publisher<T>> op) {
     return wrapList(() -> op.apply(collection));
   }

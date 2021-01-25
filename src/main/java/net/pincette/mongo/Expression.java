@@ -58,7 +58,6 @@ import javax.json.JsonString;
 import javax.json.JsonStructure;
 import javax.json.JsonValue;
 import net.pincette.json.JsonUtil;
-import net.pincette.util.Or;
 import net.pincette.util.Pair;
 import org.bson.conversions.Bson;
 
@@ -913,7 +912,7 @@ public class Expression {
 
   private static Optional<JsonValue> value(
       final JsonObject json, final String value, final Map<String, JsonValue> variables) {
-    return Or.<JsonValue>tryWith(() -> value.equals(NOW) ? createValue(now().toString()) : null)
+    return tryWith(() -> value.equals(NOW) ? createValue(now().toString()) : null)
         .or(() -> value.equals(ROOT) ? json : null)
         .or(() -> value.startsWith("$$") ? value(variables, value.substring(2)) : null)
         .or(
