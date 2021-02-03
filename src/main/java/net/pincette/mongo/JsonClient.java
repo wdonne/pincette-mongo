@@ -2,15 +2,21 @@ package net.pincette.mongo;
 
 import static com.mongodb.client.model.Filters.eq;
 import static java.util.stream.Collectors.toList;
+import static net.pincette.json.JsonUtil.createDiff;
 import static net.pincette.json.JsonUtil.createValue;
 import static net.pincette.json.JsonUtil.toNative;
 import static net.pincette.mongo.BsonUtil.fromJson;
 import static net.pincette.mongo.BsonUtil.toDocument;
+import static net.pincette.mongo.Collection.exec;
 import static net.pincette.mongo.Collection.insertOne;
 import static net.pincette.mongo.Collection.replaceOne;
+import static net.pincette.mongo.Patch.updateOperators;
 import static net.pincette.rs.Chain.with;
 
+import com.mongodb.bulk.BulkWriteResult;
+import com.mongodb.client.model.BulkWriteOptions;
 import com.mongodb.client.model.ReplaceOptions;
+import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.result.InsertOneResult;
 import com.mongodb.client.result.UpdateResult;
 import com.mongodb.reactivestreams.client.AggregatePublisher;
@@ -25,7 +31,9 @@ import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
+import javax.json.JsonPatch;
 import javax.json.JsonValue;
+import net.pincette.json.JsonUtil;
 import org.bson.BsonDocument;
 import org.bson.Document;
 import org.bson.conversions.Bson;
@@ -729,6 +737,29 @@ public class JsonClient {
         .thenApply(InsertOneResult::wasAcknowledged);
   }
 
+  /**
+   * Returns the stream of operation objects for a JSON patch.
+   *
+   * @param source the source JSON object.
+   * @param target the target JSON object.
+   * @return The operation stream.
+   * @since 2.1.1
+   */
+  public static Stream<JsonObject> patch(final JsonObject source, final JsonObject target) {
+    return patch(createDiff(source, target));
+  }
+
+  /**
+   * Returns the stream of operation objects for a JSON patch.
+   *
+   * @param patch the JSON patch.
+   * @return The operation stream.
+   * @since 2.1.1
+   */
+  public static Stream<JsonObject> patch(final JsonPatch patch) {
+    return patch.toJsonArray().stream().filter(JsonUtil::isObject).map(JsonValue::asJsonObject);
+  }
+
   private static List<JsonObject> toJson(final List<BsonDocument> list) {
     return list.stream().map(BsonUtil::fromBson).collect(toList());
   }
@@ -831,5 +862,33 @@ public class JsonClient {
             ? replaceOne(collection, session, filter, document, options)
             : replaceOne(collection, filter, document, options))
         .thenApply(UpdateResult::wasAcknowledged);
+  }
+
+  /**
+   * Updates the <code>collection</code> with <code>target</code>, but with a bulk write containing
+   * only the differences with <code>source</code>.
+   *
+   * @param collection the MongoDB collection.
+   * @param source the old version of the object.
+   * @param target the new version of the object.
+   * @return Whether the update was successful or not.
+   * @since 2.1.1
+   */
+  public static CompletionStage<Boolean> update(
+      final MongoCollection<Document> collection,
+      final JsonObject source,
+      final JsonObject target) {
+    return exec(
+            collection,
+            c ->
+                c.bulkWrite(
+                    updateOperators(source, patch(source, target))
+                        .map(
+                            op ->
+                                new UpdateOneModel<Document>(
+                                    eq(ID, fromJson(source.get(ID))), fromJson(op)))
+                        .collect(toList()),
+                    new BulkWriteOptions().ordered(true)))
+        .thenApply(BulkWriteResult::wasAcknowledged);
   }
 }
