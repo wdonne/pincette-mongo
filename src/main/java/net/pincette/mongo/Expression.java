@@ -37,6 +37,7 @@ import static net.pincette.util.Or.tryWith;
 import static net.pincette.util.Pair.pair;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -64,11 +65,12 @@ import org.bson.conversions.Bson;
 /**
  * This class lets you apply a <a
  * href="https://docs.mongodb.com/manual/meta/aggregation-quick-reference/#expressions">MongoDB
- * expression</a> to a JSON object. The only supported variable is <code>$$NOW</code>. The following
- * operators are not supported: <code>$indexOfBytes</code>, <code>$strLenBytes</code>, <code>
- * $substrBytes</code>, <code>$toDate</code>, <code>$toObjectId</code> and the date expression
- * operators. Accumulators are also not supported. Only the aggregation variables <code>
- * $$NOW</code> and <code>$$ROOT</code> are supported.
+ * expression</a> to a JSON object. The only supported variable is <code>$$NOW</code>, which is
+ * returned as an IDO 8601 string. The following operators are not supported: <code>$indexOfBytes
+ * </code>, <code>$strLenBytes</code>, <code>$substrBytes</code>, <code>$toDate</code>, <code>
+ * $toObjectId</code> and the date expression operators. Accumulators are also not supported. Only
+ * the aggregation variables <code>$$NOW</code> and <code>$$ROOT</code> are supported. The extension
+ * variable <code>$$TODAY</code> returns the current date as an ISO 8601 string.
  *
  * <p>The <code>$unescape</code> extension operator converts key names that start with "#$" to "$".
  * This way an expression can be escaped from implementation generation.
@@ -192,6 +194,7 @@ public class Expression {
   private static final String TO_LOWER = "$toLower";
   private static final String TO_STRING = "$toString";
   private static final String TO_UPPER = "$toUpper";
+  private static final String TODAY = "$$TODAY";
   private static final String TRIM = "$trim";
   private static final String TRUNC = "$trunc";
   private static final String TYPE = "$type";
@@ -913,6 +916,7 @@ public class Expression {
   private static Optional<JsonValue> value(
       final JsonObject json, final String value, final Map<String, JsonValue> variables) {
     return tryWith(() -> value.equals(NOW) ? createValue(now().toString()) : null)
+        .or(() -> value.equals(TODAY) ? createValue(LocalDate.now().toString()) : null)
         .or(() -> value.equals(ROOT) ? json : null)
         .or(() -> value.startsWith("$$") ? value(variables, value.substring(2)) : null)
         .or(

@@ -9,10 +9,13 @@ import static net.pincette.json.Factory.f;
 import static net.pincette.json.Factory.o;
 import static net.pincette.json.Factory.v;
 import static net.pincette.json.JsonUtil.createArrayBuilder;
+import static net.pincette.json.JsonUtil.createPatch;
 import static net.pincette.json.JsonUtil.getArray;
 import static net.pincette.json.JsonUtil.getValue;
 import static net.pincette.json.JsonUtil.toDotSeparated;
 import static net.pincette.mongo.JsonClient.fromJsonStream;
+import static net.pincette.util.Pair.pair;
+import static net.pincette.util.StreamUtil.takeWhile;
 import static net.pincette.util.Util.getLastSegment;
 import static net.pincette.util.Util.getParent;
 
@@ -25,6 +28,7 @@ import javax.json.JsonObject;
 import javax.json.JsonPatch;
 import javax.json.JsonValue;
 import net.pincette.json.JsonUtil;
+import net.pincette.util.Pair;
 import org.bson.conversions.Bson;
 
 /**
@@ -71,6 +75,19 @@ public class Patch {
 
   private static JsonObject copy(final JsonObject original, final JsonObject op) {
     return add(original, op, getValue(original, op.getString(FROM)).orElse(NULL));
+  }
+
+  private static Stream<Pair<JsonObject, JsonObject>> incremental(
+      final JsonObject original, final Stream<JsonObject> patch) {
+    return takeWhile(
+        patch,
+        op -> pair(original, op),
+        (pair, op) -> pair(incremental(pair.first, pair.second), op),
+        pair -> true);
+  }
+
+  private static JsonObject incremental(final JsonObject original, final JsonObject op) {
+    return createPatch(a(op)).apply(original).asJsonObject();
   }
 
   private static Stream<JsonObject> move(final JsonObject original, final JsonObject op) {
@@ -172,10 +189,8 @@ public class Patch {
    */
   public static Stream<JsonObject> updateOperators(
       final JsonObject original, final Stream<JsonObject> patch) {
-    return patch
-        .filter(JsonUtil::isObject)
-        .map(JsonValue::asJsonObject)
-        .flatMap(op -> operation(original, op));
+    return incremental(original, patch.filter(JsonUtil::isObject).map(JsonValue::asJsonObject))
+        .flatMap(pair -> operation(pair.first, pair.second));
   }
 
   private static class ArrayValue {

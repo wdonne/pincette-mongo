@@ -1,6 +1,7 @@
 package net.pincette.mongo;
 
 import static com.mongodb.client.model.Filters.eq;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static net.pincette.json.JsonUtil.createDiff;
 import static net.pincette.json.JsonUtil.createValue;
@@ -10,7 +11,6 @@ import static net.pincette.mongo.BsonUtil.toDocument;
 import static net.pincette.mongo.Collection.exec;
 import static net.pincette.mongo.Collection.insertOne;
 import static net.pincette.mongo.Collection.replaceOne;
-import static net.pincette.mongo.Patch.updateOperators;
 import static net.pincette.rs.Chain.with;
 
 import com.mongodb.bulk.BulkWriteResult;
@@ -878,17 +878,19 @@ public class JsonClient {
       final MongoCollection<Document> collection,
       final JsonObject source,
       final JsonObject target) {
-    return exec(
-            collection,
-            c ->
-                c.bulkWrite(
-                    updateOperators(source, patch(source, target))
-                        .map(
-                            op ->
-                                new UpdateOneModel<Document>(
-                                    eq(ID, fromJson(source.get(ID))), fromJson(op)))
-                        .collect(toList()),
-                    new BulkWriteOptions().ordered(true)))
-        .thenApply(BulkWriteResult::wasAcknowledged);
+    return Optional.of(updateOperators(source, target))
+        .filter(ops -> !ops.isEmpty())
+        .map(
+            ops ->
+                exec(collection, c -> c.bulkWrite(ops, new BulkWriteOptions().ordered(true)))
+                    .thenApply(BulkWriteResult::wasAcknowledged))
+        .orElseGet(() -> completedFuture(true));
+  }
+
+  private static List<UpdateOneModel<Document>> updateOperators(
+      final JsonObject source, final JsonObject target) {
+    return Patch.updateOperators(source, patch(source, target))
+        .map(op -> new UpdateOneModel<Document>(eq(ID, fromJson(source.get(ID))), fromJson(op)))
+        .collect(toList());
   }
 }
