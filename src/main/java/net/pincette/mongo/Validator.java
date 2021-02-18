@@ -7,9 +7,11 @@ import static java.util.stream.Stream.concat;
 import static java.util.stream.Stream.empty;
 import static java.util.stream.Stream.of;
 import static net.pincette.json.JsonUtil.add;
+import static net.pincette.json.JsonUtil.asString;
 import static net.pincette.json.JsonUtil.createArrayBuilder;
 import static net.pincette.json.JsonUtil.createObjectBuilder;
 import static net.pincette.json.JsonUtil.createReader;
+import static net.pincette.json.JsonUtil.createValue;
 import static net.pincette.json.JsonUtil.emptyObject;
 import static net.pincette.json.JsonUtil.getArray;
 import static net.pincette.json.JsonUtil.getObjects;
@@ -29,6 +31,7 @@ import static net.pincette.util.StreamUtil.rangeExclusive;
 import static net.pincette.util.StreamUtil.zip;
 import static net.pincette.util.Util.getLastSegment;
 import static net.pincette.util.Util.getParent;
+import static net.pincette.util.Util.resolveFile;
 import static net.pincette.util.Util.to;
 import static net.pincette.util.Util.tryToGetRethrow;
 import static net.pincette.util.Util.tryToGetWithRethrow;
@@ -142,6 +145,7 @@ public class Validator {
   private static final String EXISTS = "$exists";
   private static final String EXPAND = "expand";
   private static final String INCLUDE = "include";
+  private static final String JSLT_PATH = "$jslt.script";
   private static final String LOCATION = "$location";
   private static final String MACROS = "macros";
   private static final String REF = "ref";
@@ -315,6 +319,10 @@ public class Validator {
         .isPresent();
   }
 
+  private static boolean isJsltPath(final String path) {
+    return path.endsWith(JSLT_PATH);
+  }
+
   private static boolean isMacroRef(final JsonValue value) {
     return getMacroRef(value).isPresent();
   }
@@ -329,6 +337,15 @@ public class Validator {
 
   private static boolean isWith(final JsonValue value) {
     return getWith(value).isPresent();
+  }
+
+  private static Transformer jsltResolver(final File baseDirectory) {
+    return new Transformer(
+        entry -> isJsltPath(entry.path),
+        entry ->
+            resolveFile(baseDirectory, asString(entry.value).getString())
+                .map(File::getAbsolutePath)
+                .map(file -> new JsonEntry(entry.path, createValue(file))));
   }
 
   private static JsonObject load(
@@ -398,17 +415,7 @@ public class Validator {
         || getValue(json.asJsonObject(), parent).isPresent();
   }
 
-  private static JsonObject resolve(
-      final JsonObject specification,
-      final Map<String, JsonObject> loaded,
-      final File baseDirectory) {
-    final JsonObject json = include(specification, loaded, baseDirectory);
-
-    return transform(
-        json, expand(json).thenApply(resolver(loaded, baseDirectory)).thenApply(REMOVER));
-  }
-
-  private static Transformer resolver(
+  private static Transformer refResolver(
       final Map<String, JsonObject> loaded, final File baseDirectory) {
     return new Transformer(
         entry -> isRef(entry.value),
@@ -416,6 +423,20 @@ public class Validator {
             Optional.of(entry.value.asJsonObject().getString(REF))
                 .map(ref -> loadRef(ref, loaded, baseDirectory))
                 .map(ref -> new JsonEntry(entry.path, ref)));
+  }
+
+  private static JsonObject resolve(
+      final JsonObject specification,
+      final Map<String, JsonObject> loaded,
+      final File baseDirectory) {
+    final JsonObject json = include(specification, loaded, baseDirectory);
+
+    return transform(
+        json,
+        expand(json)
+            .thenApply(refResolver(loaded, baseDirectory))
+            .thenApply(jsltResolver(baseDirectory))
+            .thenApply(REMOVER));
   }
 
   private static String resourcePath(final String ref) {
@@ -527,7 +548,7 @@ public class Validator {
    * @since 1.4.1
    */
   public JsonObject resolve(final JsonObject specification) {
-    return resolve(specification, (File) null);
+    return resolve(specification, null);
   }
 
   /**

@@ -1,5 +1,6 @@
 package net.pincette.mongo;
 
+import com.schibsted.spt.data.jslt.Function;
 import com.schibsted.spt.data.jslt.ResourceResolver;
 import java.util.Map;
 
@@ -10,32 +11,40 @@ import java.util.Map;
  * @since 1.5
  */
 public class Features {
+  public final java.util.Collection<Function> customJsltFunctions;
   public final Map<String, Operator> expressionExtensions;
   public final ResourceResolver jsltResolver;
   public final Map<String, QueryOperator> matchExtensions;
 
   public Features() {
-    this(null, null, null);
+    this(null, null, null, null);
   }
 
   private Features(
+      final java.util.Collection<Function> customJsltFunctions,
       final Map<String, Operator> expressionExtensions,
       final ResourceResolver jsltResolver,
       final Map<String, QueryOperator> matchExtensions) {
+    this.customJsltFunctions = customJsltFunctions;
     this.expressionExtensions = expressionExtensions;
     this.jsltResolver = jsltResolver;
     this.matchExtensions = matchExtensions;
   }
 
+  public Features withCustomJsltFunctions(
+      final java.util.Collection<Function> customJsltFunctions) {
+    return new Features(customJsltFunctions, expressionExtensions, jsltResolver, matchExtensions);
+  }
+
   public Features withExpressionExtensions(final Map<String, Operator> expressionExtensions) {
-    return new Features(expressionExtensions, jsltResolver, matchExtensions);
+    return new Features(customJsltFunctions, expressionExtensions, jsltResolver, matchExtensions);
   }
 
   public Features withJsltResolver(final ResourceResolver jsltResolver) {
-    return new Features(expressionExtensions, jsltResolver, matchExtensions);
+    return new Features(customJsltFunctions, expressionExtensions, jsltResolver, matchExtensions);
   }
 
   public Features withMatchExtensions(final Map<String, QueryOperator> matchExtensions) {
-    return new Features(expressionExtensions, jsltResolver, matchExtensions);
+    return new Features(customJsltFunctions, expressionExtensions, jsltResolver, matchExtensions);
   }
 }

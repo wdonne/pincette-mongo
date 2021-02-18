@@ -10,7 +10,8 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static javax.json.JsonValue.FALSE;
 import static javax.json.JsonValue.NULL;
-import static net.pincette.json.Jslt.tryTransformer;
+import static net.pincette.json.Jslt.transformerValue;
+import static net.pincette.json.Jslt.tryReader;
 import static net.pincette.json.JsonUtil.asInt;
 import static net.pincette.json.JsonUtil.asNumber;
 import static net.pincette.json.JsonUtil.asString;
@@ -58,6 +59,7 @@ import javax.json.JsonObject;
 import javax.json.JsonString;
 import javax.json.JsonStructure;
 import javax.json.JsonValue;
+import net.pincette.json.Jslt;
 import net.pincette.json.JsonUtil;
 import net.pincette.util.Pair;
 import org.bson.conversions.Bson;
@@ -77,9 +79,9 @@ import org.bson.conversions.Bson;
  *
  * <p>The expression of the <code>$jslt</code> extension operator should be an object with the
  * mandatory fields <code>input</code> and <code>script</code>. The former is an expression that
- * should produce a JSON object. The latter is a reference to a JSLT script. If the value starts
- * with "resource:" then it is treated as a resource in the class path. Otherwise it is a filename
- * or a script.
+ * should produce a JSON value. The latter is a reference to a JSLT script. If the value starts with
+ * "resource:" then it is treated as a resource in the class path. Otherwise it is a filename or a
+ * script. The result of the expression will be a JSON value.
  *
  * <p>The <code>$sort</code> extension operator receives an object with the mandatory field <code>
  * input</code>, which should be an expression that yields an array. The optional field <code>
@@ -592,10 +594,14 @@ public class Expression {
 
   private static Implementation jslt(final JsonValue value, final Features features) {
     final Implementation input = memberFunction(value, INPUT, features);
-    final UnaryOperator<JsonObject> script =
+    final UnaryOperator<JsonValue> script =
         member(value, SCRIPT, v -> asString(v).getString())
             .map(
-                s -> tryTransformer(s, null, null, features != null ? features.jsltResolver : null))
+                s ->
+                    transformerValue(
+                        new Jslt.Context(tryReader(s))
+                            .withResolver(features != null ? features.jsltResolver : null)
+                            .withFunctions(features != null ? features.customJsltFunctions : null)))
             .orElse(null);
 
     return (json, vars) ->
