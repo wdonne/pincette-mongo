@@ -186,6 +186,10 @@ class Arrays {
         features);
   }
 
+  static Implementation first(final JsonValue value, final Features features) {
+    return arrayElemAt(createArrayBuilder().add(value).add(0).build(), features);
+  }
+
   static Implementation in(final JsonValue value, final Features features) {
     final List<Implementation> implementations = implementations(value, features);
 
@@ -257,6 +261,10 @@ class Arrays {
         .map(JsonValue::asJsonArray)
         .filter(a -> a.size() == 2 && isString(a.get(0)))
         .isPresent();
+  }
+
+  static Implementation last(final JsonValue value, final Features features) {
+    return arrayElemAt(createArrayBuilder().add(value).add(-1).build(), features);
   }
 
   static Implementation mapOp(final JsonValue value, final Features features) {
