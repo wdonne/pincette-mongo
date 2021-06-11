@@ -24,30 +24,35 @@ class TestElementMatch {
   }
 
   @Test
-  @DisplayName("$type")
-  void typeTest() {
-    assertTrue(predicate(type("test", "array")).test(o(f("test", a(v(0))))));
+  @DisplayName("$type false")
+  void typeTestFalse() {
     assertFalse(predicate(type("test", "array")).test(o(f("test", v(0)))));
-    assertTrue(predicate(type("test", "bool")).test(o(f("test", v(true)))));
-    assertTrue(predicate(type("test", "bool")).test(o(f("test", v(false)))));
     assertFalse(predicate(type("test", "bool")).test(o(f("test", v(0)))));
-    assertTrue(predicate(type("test", "date")).test(o(f("test", v("2020-04-18")))));
     assertFalse(predicate(type("test", "date")).test(o(f("test", v("test")))));
-    assertTrue(predicate(type("test", "double")).test(o(f("test", v(0.0)))));
-    assertTrue(predicate(type("test", "double")).test(o(f("test", v(0)))));
     assertFalse(predicate(type("test", "double")).test(o(f("test", v("test")))));
-    assertTrue(predicate(type("test", "int")).test(o(f("test", v(0)))));
     assertFalse(predicate(type("test", "int")).test(o(f("test", v("test")))));
-    assertTrue(predicate(type("test", "long")).test(o(f("test", v(0L)))));
     assertFalse(predicate(type("test", "long")).test(o(f("test", v("test")))));
-    assertTrue(predicate(type("test", "null")).test(o(f("test", v(null)))));
     assertFalse(predicate(type("test", "null")).test(o(f("test", v("test")))));
-    assertTrue(predicate(type("test", "object")).test(o(f("test", o(f("test", v(0)))))));
     assertFalse(predicate(type("test", "object")).test(o(f("test", v(0)))));
-    assertTrue(predicate(type("test", "string")).test(o(f("test", v("test")))));
     assertFalse(predicate(type("test", "string")).test(o(f("test", v(0)))));
-    assertTrue(predicate(type("test", "timestamp")).test(o(f("test", v("2020-04-18T00:00:00Z")))));
     assertFalse(predicate(type("test", "timestamp")).test(o(f("test", v("test")))));
     assertFalse(predicate(type("test", "test")).test(o(f("test", v(0)))));
+  }
+
+  @Test
+  @DisplayName("$type true")
+  void typeTestTrue() {
+    assertTrue(predicate(type("test", "array")).test(o(f("test", a(v(0))))));
+    assertTrue(predicate(type("test", "bool")).test(o(f("test", v(true)))));
+    assertTrue(predicate(type("test", "bool")).test(o(f("test", v(false)))));
+    assertTrue(predicate(type("test", "date")).test(o(f("test", v("2020-04-18")))));
+    assertTrue(predicate(type("test", "double")).test(o(f("test", v(0.0)))));
+    assertTrue(predicate(type("test", "double")).test(o(f("test", v(0)))));
+    assertTrue(predicate(type("test", "int")).test(o(f("test", v(0)))));
+    assertTrue(predicate(type("test", "long")).test(o(f("test", v(0L)))));
+    assertTrue(predicate(type("test", "null")).test(o(f("test", v(null)))));
+    assertTrue(predicate(type("test", "object")).test(o(f("test", o(f("test", v(0)))))));
+    assertTrue(predicate(type("test", "string")).test(o(f("test", v("test")))));
+    assertTrue(predicate(type("test", "timestamp")).test(o(f("test", v("2020-04-18T00:00:00Z")))));
   }
 }

@@ -1,0 +1,19 @@
+{
+  "title": "Validator test1",
+  "include": [
+    "../../common/macros.json",
+    "../../common/conditions.json"
+  ],
+  "conditions": [
+    {
+      "field1": "_bool_",
+      "$code": "BOOL",
+      "$comment": "Should be a Boolean"
+    },
+    {
+      "field2": {
+        "ref": "../../common/object.json"
+      }
+    }
+  ]
+}

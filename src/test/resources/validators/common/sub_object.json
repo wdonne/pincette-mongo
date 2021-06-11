@@ -1,0 +1,42 @@
+{
+  "title": "Subobject",
+  "include": [
+    "macros.json"
+  ],
+  "macros": {
+    "field1": {
+      "field1": "_int_",
+      "$code": "INT",
+      "$comment": "Should be an integer"
+    }
+  },
+  "conditions": [
+    "_field1_",
+    {
+      "field1": {
+        "$exists": true
+      },
+      "$code": "REQUIRED",
+      "$comment": "field1 must be present"
+    },
+    {
+      "field2": "_email_",
+      "$code": "EMAIL",
+      "$comment": "Should be an e-mail"
+    },
+    {
+      "$and": [
+        {
+          "field1": {
+            "$gte": 0
+          }
+        },
+        {
+          "field1": {
+            "$lt": 100000
+          }
+        }
+      ]
+    }
+  ]
+}

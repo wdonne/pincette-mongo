@@ -1,0 +1,39 @@
+{
+  "title": "Object",
+  "include": [
+    "macros.json"
+  ],
+  "macros": {
+    "field1": {
+      "field1": "_string_",
+      "$code": "STRING",
+      "$comment": "Should be a string"
+    },
+    "sub1": {
+      "sub1": {
+        "ref": "sub_object.json"
+      }
+    }
+  },
+  "conditions": [
+    "_field1_",
+    {
+      "field2": "_bool_",
+      "$code": "BOOL",
+      "$comment": "Should be a Boolean"
+    },
+    "_sub1_",
+    {
+      "sub1": {
+        "$exists": true
+      },
+      "$code": "REQUIRED",
+      "$comment": "sub1 must be present"
+    },
+    {
+      "sub2": {
+        "ref": "sub_object.json"
+      }
+    }
+  ]
+}

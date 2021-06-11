@@ -1,46 +1,38 @@
 package net.pincette.mongo;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.concat;
 import static java.util.stream.Stream.empty;
 import static java.util.stream.Stream.of;
 import static net.pincette.json.JsonUtil.add;
-import static net.pincette.json.JsonUtil.asString;
+import static net.pincette.json.JsonUtil.arrayValue;
 import static net.pincette.json.JsonUtil.createArrayBuilder;
 import static net.pincette.json.JsonUtil.createObjectBuilder;
-import static net.pincette.json.JsonUtil.createReader;
-import static net.pincette.json.JsonUtil.createValue;
 import static net.pincette.json.JsonUtil.emptyObject;
 import static net.pincette.json.JsonUtil.getArray;
+import static net.pincette.json.JsonUtil.getObject;
 import static net.pincette.json.JsonUtil.getObjects;
 import static net.pincette.json.JsonUtil.getStrings;
 import static net.pincette.json.JsonUtil.getValue;
 import static net.pincette.json.JsonUtil.isArray;
 import static net.pincette.json.JsonUtil.isObject;
+import static net.pincette.json.JsonUtil.objectValue;
+import static net.pincette.json.JsonUtil.stringValue;
 import static net.pincette.json.JsonUtil.toJsonPointer;
+import static net.pincette.json.Transform.nopTransformer;
 import static net.pincette.json.Transform.transform;
 import static net.pincette.mongo.Match.predicate;
-import static net.pincette.mongo.Match.predicateValue;
 import static net.pincette.util.Builder.create;
+import static net.pincette.util.Collections.computeIfAbsent;
 import static net.pincette.util.Collections.set;
 import static net.pincette.util.Or.tryWith;
 import static net.pincette.util.Pair.pair;
 import static net.pincette.util.StreamUtil.rangeExclusive;
 import static net.pincette.util.StreamUtil.zip;
 import static net.pincette.util.Util.getLastSegment;
-import static net.pincette.util.Util.getParent;
-import static net.pincette.util.Util.resolveFile;
-import static net.pincette.util.Util.to;
-import static net.pincette.util.Util.tryToGetRethrow;
-import static net.pincette.util.Util.tryToGetWithRethrow;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,10 +45,7 @@ import java.util.stream.Stream;
 import javax.json.JsonArray;
 import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
-import javax.json.JsonReader;
-import javax.json.JsonString;
 import javax.json.JsonValue;
-import net.pincette.function.SideEffect;
 import net.pincette.json.JsonUtil;
 import net.pincette.json.Transform.JsonEntry;
 import net.pincette.json.Transform.Transformer;
@@ -72,7 +61,11 @@ import net.pincette.util.Pair;
  *   <dd>An array of MongoDB query expressions. which can have the standard <code>$comment</code>
  *       operator and the extension operator <code>$code</code>. The former is for documentation
  *       purposes and the latter will be returned in the errors array in the <code>code</code> field
- *       when the expression returns <code>false</code>.
+ *       when the expression returns <code>false</code>. If the value of a field in the expression
+ *       has an object with only the field <code>ref</code> as its value, then the conditions
+ *       referred to by <code>ref</code> will be applied to the field. If it is an array with such a
+ *       ref object, then the value is first checked to be an array and the referred conditions will
+ *       be applied to the objects in the array.
  *   <dt>description
  *   <dd>A short string describing the specification.
  *   <dt>include
@@ -82,7 +75,7 @@ import net.pincette.util.Pair;
  *       and all of their macros are available. The including specification may redefine a macro,
  *       but it will only affect itself and other specifications it is included in.
  *   <dt>macros
- *   <dd>A JSON object where each field represents a macro. It a field is called <code>myfield
+ *   <dd>A JSON object where each field represents a macro. If a field is called <code>myfield
  *       </code> then you can use it in conditions and other macros as <code>_myfield_</code>. Such
  *       an occurrence will be replaced with the value in the macro object.
  *   <dt>title
@@ -126,6 +119,18 @@ import net.pincette.util.Pair;
  *         ]
  *       },
  *       "$code": "SAME_CLB"
+ *     },
+ *     {
+ *       "_jwt": {
+ *         "ref": "../../jwt.json"
+ *       }
+ *     },
+ *     {
+ *       "clbs": [
+ *         {
+ *           "ref": "clb.json"
+ *         }
+ *       ]
  *     }
  *   ]
  * }</pre>
@@ -142,16 +147,11 @@ public class Validator {
   private static final String DESCRIPTION = "description";
   private static final String ERROR_CODE = "code";
   private static final String ERROR_LOCATION = "location";
-  private static final String EXISTS = "$exists";
-  private static final String EXPAND = "expand";
   private static final String INCLUDE = "include";
-  private static final String JSLT_PATH = "$jslt.script";
   private static final String LOCATION = "$location";
   private static final String MACROS = "macros";
   private static final String REF = "ref";
-  private static final String RESOURCE = "resource:";
   private static final String TITLE = "title";
-  private static final String WITH = "with";
   private static final Set<String> REMOVE = set(COMMENT, DESCRIPTION, TITLE);
   private static final Transformer REMOVER =
       new Transformer(
@@ -159,7 +159,7 @@ public class Validator {
           entry -> Optional.empty());
   private final Map<JsonObject, Condition> conditionCache = new HashMap<>();
   private final Features features;
-  private final Map<String, JsonObject> loaded = new HashMap<>();
+  private final Resolver resolver;
 
   public Validator() {
     this(null);
@@ -172,20 +172,28 @@ public class Validator {
    * @since 2.0
    */
   public Validator(final Features features) {
+    this(features, null);
+  }
+
+  /**
+   * Creates a validator with extra features for the underlying MongoDB query language and a
+   * resolver.
+   *
+   * @param features the extra features. It may be <code>null</code>.
+   * @param resolver the resolver, which resolves includes and <code>ref</code> fields. It may be
+   *     <code>null</code>.
+   * @since 2.2
+   */
+  public Validator(final Features features, final Resolver resolver) {
     this.features = features;
+    this.resolver = resolver != null ? resolver : new SourceResolver()::resolve;
   }
 
   private static Transformer arrayExpander(final JsonObject macros) {
     return new Transformer(
         entry -> isArray(entry.value),
         entry ->
-            Optional.of(
-                new JsonEntry(
-                    entry.path,
-                    entry.value.asJsonArray().stream()
-                        .map(value -> isMacroRef(value) ? expand(value, macros) : value)
-                        .reduce(createArrayBuilder(), JsonArrayBuilder::add, (b1, b2) -> b1)
-                        .build())));
+            Optional.of(new JsonEntry(entry.path, expandArray(entry.value.asJsonArray(), macros))));
   }
 
   private static JsonArrayBuilder combineConditions(
@@ -198,32 +206,26 @@ public class Validator {
         .reduce(createArrayBuilder(), JsonArrayBuilder::add, (b1, b2) -> b1);
   }
 
-  private static JsonObject combineMacros(final JsonObject json, final JsonObject included) {
+  private static JsonObject combineMacros(final JsonObject json, final JsonObject includedMacros) {
     return add(
-        included,
+        includedMacros,
         ofNullable(json.getJsonObject(MACROS))
-            .map(macros -> transform(macros, expanders(included)))
+            .map(
+                macros ->
+                    !includedMacros.isEmpty()
+                        ? transform(macros, expanders(includedMacros))
+                        : macros)
             .orElseGet(JsonUtil::emptyObject));
   }
 
   private static Condition condition(
       final JsonObject condition, final String code, final Features features) {
-    final String field = getField(condition);
-    final boolean isExists = field != null && isExists(condition.get(field));
-    final Predicate<JsonObject> predicateObject = predicate(strip(condition), features);
-    final Predicate<JsonValue> predicateValue = predicateValue(strip(condition), features);
-    final Predicate<JsonValue> test =
-        json ->
-            isObject(json) ? predicateObject.test(json.asJsonObject()) : predicateValue.test(json);
+    final String conditionPath =
+        ofNullable(getField(condition)).map(JsonUtil::toJsonPointer).orElse("");
+    final Predicate<JsonObject> test = predicate(strip(condition), features);
 
     return (json, path) ->
-        !parentExists(json, path)
-                || (field != null
-                    && !isExists
-                    && !getValue(json.asJsonObject(), toJsonPointer(field)).isPresent())
-                || test.test(json)
-            ? empty()
-            : of(createError(path, code));
+        test.test(testObject(json, path, conditionPath)) ? empty() : of(createError(path, code));
   }
 
   private static JsonObject createError(final String path, final String code) {
@@ -234,14 +236,15 @@ public class Validator {
         .build();
   }
 
-  private static Transformer expand(final JsonObject json) {
-    return ofNullable(json.getJsonObject(MACROS))
-        .map(macros -> with(macros).thenApply(expanders(macros)))
-        .orElseGet(() -> with(emptyObject()));
-  }
-
   private static JsonValue expand(final JsonValue value, final JsonObject macros) {
     return getMacroRef(value).flatMap(ref -> getValue(macros, "/" + ref)).orElse(value);
+  }
+
+  private static JsonArray expandArray(final JsonArray array, final JsonObject macros) {
+    return array.stream()
+        .map(value -> isMacroRef(value) ? expand(value, macros) : value)
+        .reduce(createArrayBuilder(), JsonArrayBuilder::add, (b1, b2) -> b1)
+        .build();
   }
 
   private static Transformer expander(final JsonObject macros) {
@@ -251,29 +254,15 @@ public class Validator {
   }
 
   private static Transformer expanders(final JsonObject macros) {
-    return arrayExpander(macros).thenApply(expander(macros));
+    return !macros.isEmpty() ? arrayExpander(macros).thenApply(expander(macros)) : nopTransformer();
   }
 
   private static String getField(final JsonObject condition) {
     return condition.keySet().stream().filter(k -> !k.startsWith("$")).findFirst().orElse(null);
   }
 
-  private static Optional<JsonObject> getInstruction(final JsonValue value, final String name) {
-    return Optional.of(value)
-        .filter(JsonUtil::isObject)
-        .map(JsonValue::asJsonObject)
-        .filter(
-            json ->
-                Optional.of(json.keySet())
-                    .map(keys -> keys.size() == 1 && keys.iterator().next().equals(name))
-                    .orElse(false));
-  }
-
   private static Optional<String> getMacroRef(final JsonValue value) {
-    return Optional.of(value)
-        .filter(JsonUtil::isString)
-        .map(JsonUtil::asString)
-        .map(JsonString::getString)
+    return stringValue(value)
         .filter(s -> s.startsWith("_") && s.endsWith("_"))
         .map(s -> s.substring(1, s.length() - 1));
   }
@@ -287,17 +276,29 @@ public class Validator {
             .orElse("");
   }
 
-  private static Optional<JsonObject> getRef(final JsonValue value) {
-    return getInstruction(value, REF);
+  private static Optional<String> getRef(final JsonValue value) {
+    return objectValue(value)
+        .filter(json -> hasOnlyThisKey(json, REF))
+        .map(json -> ofNullable(json.getString(REF, null)))
+        .orElseGet(() -> getRefInArray(value));
   }
 
-  private static Optional<JsonObject> getWith(final JsonValue value) {
-    return getInstruction(value, WITH);
+  private static Optional<String> getRefInArray(final JsonValue value) {
+    return arrayValue(value)
+        .filter(a -> a.size() == 1)
+        .map(a -> a.get(0))
+        .flatMap(Validator::getRef);
+  }
+
+  private static boolean hasOnlyThisKey(final JsonObject json, final String key) {
+    return Optional.of(json.keySet())
+        .map(keys -> keys.size() == 1 && keys.iterator().next().equals(key))
+        .orElse(false);
   }
 
   private static JsonObject include(
-      final JsonObject json, final Map<String, JsonObject> loaded, final File baseDirectory) {
-    final Pair<Stream<JsonValue>, JsonObject> included = loadIncluded(json, loaded, baseDirectory);
+      final JsonObject json, final Resolver resolver, final String context) {
+    final Pair<Stream<JsonValue>, JsonObject> included = loadIncluded(json, resolver, context);
 
     return createObjectBuilder(json)
         .remove(INCLUDE)
@@ -311,18 +312,6 @@ public class Validator {
     return isObject(value) && value.asJsonObject().containsKey(CONDITIONS);
   }
 
-  private static boolean isExists(final JsonValue expression) {
-    return Optional.of(expression)
-        .filter(JsonUtil::isObject)
-        .map(JsonValue::asJsonObject)
-        .filter(json -> json.containsKey(EXISTS))
-        .isPresent();
-  }
-
-  private static boolean isJsltPath(final String path) {
-    return path.endsWith(JSLT_PATH);
-  }
-
   private static boolean isMacroRef(final JsonValue value) {
     return getMacroRef(value).isPresent();
   }
@@ -331,174 +320,108 @@ public class Validator {
     return getRef(value).isPresent();
   }
 
-  private static boolean isResource(final String ref) {
-    return ref.startsWith(RESOURCE);
-  }
-
-  private static boolean isWith(final JsonValue value) {
-    return getWith(value).isPresent();
-  }
-
-  private static Transformer jsltResolver(final File baseDirectory) {
-    return new Transformer(
-        entry -> isJsltPath(entry.path),
-        entry ->
-            resolveFile(baseDirectory, asString(entry.value).getString())
-                .map(File::getAbsolutePath)
-                .map(file -> new JsonEntry(entry.path, createValue(file))));
-  }
-
-  private static JsonObject load(
-      final Reader reader, final Map<String, JsonObject> loaded, final File baseDirectory) {
-    return resolve(
-        tryToGetWithRethrow(() -> createReader(reader), JsonReader::readObject).orElse(null),
-        loaded,
-        baseDirectory);
-  }
-
-  private static JsonObject load(
-      final InputStream in, final Map<String, JsonObject> loaded, final File baseDirectory) {
-    return load(new InputStreamReader(in, UTF_8), loaded, baseDirectory);
-  }
-
-  private static JsonObject load(final File file, final Map<String, JsonObject> loaded) {
-    return load(
-        tryToGetRethrow(() -> new FileInputStream(file)).orElse(null),
-        loaded,
-        file.getParentFile());
-  }
-
-  private static JsonObject load(final String resource, final Map<String, JsonObject> loaded) {
-    return load(Validator.class.getResourceAsStream(resource), loaded, null);
-  }
-
   private static Pair<Stream<JsonValue>, JsonObject> loadIncluded(
-      final JsonObject json, final Map<String, JsonObject> loaded, final File baseDirectory) {
+      final JsonObject json, final Resolver resolver, final String context) {
     return getStrings(json, INCLUDE)
-        .map(ref -> loadRef(ref, loaded, baseDirectory))
-        .map(
-            ref ->
-                pair(
-                    ref.getJsonArray(CONDITIONS).stream(),
-                    ofNullable(ref.getJsonObject(MACROS)).orElseGet(JsonUtil::emptyObject)))
+        .map(s -> resolver.apply(s, context))
+        .filter(Optional::isPresent)
+        .map(Optional::get)
+        .map(resolved -> resolve(resolved.specification, resolver, resolved.source))
+        .map(included -> pair(included.getJsonArray(CONDITIONS).stream(), macros(included)))
         .reduce(
             pair(empty(), emptyObject()),
             (r, p) -> pair(concat(r.first, p.first), add(r.second, p.second)),
             (r1, r2) -> r1);
   }
 
-  private static JsonObject loadRef(
-      final String ref, final Map<String, JsonObject> loaded, final File baseDirectory) {
-    final String realRef =
-        isResource(ref) || baseDirectory == null
-            ? ref
-            : new File(baseDirectory, ref).getAbsolutePath();
-
-    return ofNullable(loaded.get(realRef))
-        .orElseGet(
-            () ->
-                SideEffect.<JsonObject>run(
-                        () ->
-                            loaded.put(
-                                realRef,
-                                isResource(ref)
-                                    ? load(resourcePath(ref), loaded)
-                                    : load(new File(realRef), loaded)))
-                    .andThenGet(() -> loaded.get(realRef)));
+  private static JsonObject macros(final JsonObject specification) {
+    return ofNullable(specification.getJsonObject(MACROS)).orElseGet(JsonUtil::emptyObject);
   }
 
-  private static boolean parentExists(final JsonValue json, final String path) {
-    final String parent = getParent(path, "/");
-
-    return parent.equals("/")
-        || !isObject(json)
-        || getValue(json.asJsonObject(), parent).isPresent();
+  private static Optional<String> parentPath(final String path, final String conditionPath) {
+    return Optional.of(path.lastIndexOf(conditionPath))
+        .filter(i -> i != -1)
+        .map(i -> path.substring(0, i));
   }
 
-  private static Transformer refResolver(
-      final Map<String, JsonObject> loaded, final File baseDirectory) {
+  private static Transformer refResolver(final Resolver resolver, final String context) {
     return new Transformer(
         entry -> isRef(entry.value),
         entry ->
-            Optional.of(entry.value.asJsonObject().getString(REF))
-                .map(ref -> loadRef(ref, loaded, baseDirectory))
-                .map(ref -> new JsonEntry(entry.path, ref)));
+            getRef(entry.value)
+                .flatMap(ref -> resolver.apply(ref, context))
+                .map(resolved -> resolve(resolved.specification, resolver, resolved.source))
+                .map(
+                    resolved ->
+                        isArray(entry.value)
+                            ? createArrayBuilder().add(resolved).build()
+                            : resolved)
+                .map(resolved -> new JsonEntry(entry.path, resolved)));
   }
 
-  private static JsonObject resolve(
-      final JsonObject specification,
-      final Map<String, JsonObject> loaded,
-      final File baseDirectory) {
-    final JsonObject json = include(specification, loaded, baseDirectory);
+  /**
+   * When a validation specification includes other specifications they are resolved recursively.
+   *
+   * @param specification the validation specification.
+   * @param resolver the resolver for resolving all inclusions and references.
+   * @param context the context to resolve relative references with. It may be <code>null</code>.
+   * @return the resolved validation specification.
+   * @since 2.2
+   */
+  public static JsonObject resolve(
+      final JsonObject specification, final Resolver resolver, final String context) {
+    final JsonObject json = include(specification, resolver, context);
 
     return transform(
-        json,
-        expand(json)
-            .thenApply(refResolver(loaded, baseDirectory))
-            .thenApply(jsltResolver(baseDirectory))
-            .thenApply(REMOVER));
-  }
-
-  private static String resourcePath(final String ref) {
-    return ref.substring(RESOURCE.length());
+        json, expanders(macros(json)).thenApply(refResolver(resolver, context)).thenApply(REMOVER));
   }
 
   private static JsonObject strip(final JsonObject condition) {
     return createObjectBuilder(condition).remove(LOCATION).remove(CODE).build();
   }
 
-  private static Transformer with(final JsonObject macros) {
-    return new Transformer(
-        entry -> isWith(entry.value),
-        entry ->
-            Optional.of(
-                new JsonEntry(
-                    entry.path,
-                    transform(
-                        entry.value, expanders(withMacros(entry.value.asJsonObject(), macros))))));
-  }
-
-  private static JsonObject withMacros(final JsonObject with, final JsonObject macros) {
-    return add(macros, createObjectBuilder(with.asJsonObject()).remove(EXPAND).build());
+  private static JsonObject testObject(
+      final JsonObject json, final String path, final String conditionPath) {
+    return parentPath(path, conditionPath)
+        .filter(p -> !p.equals(""))
+        .flatMap(p -> getObject(json, p))
+        .orElse(json);
   }
 
   private Condition condition(final JsonObject condition) {
     final Condition c =
-        ofNullable(conditionCache.get(condition))
-            .orElseGet(
-                () ->
-                    SideEffect.<Condition>run(
-                            () ->
-                                conditionCache.put(
-                                    condition, generateCondition(condition, features)))
-                        .andThenGet(() -> conditionCache.get(condition)));
+        computeIfAbsent(conditionCache, condition, k -> generateCondition(k, features));
 
     return (json, path) -> c.apply(json, getPath(condition, path));
   }
 
+  private Condition conditions(final String field, final JsonValue value) {
+    return isConditions(value)
+        ? conditionsObject(value.asJsonObject())
+        : conditionArray(field, value.asJsonArray());
+  }
+
   private Condition conditionArray(final String field, final JsonArray array) {
-    final JsonObject condition = array.get(0).asJsonObject();
-    final Condition conditions = conditions(null, condition);
+    final Condition conditions = conditionsObject(array.get(0).asJsonObject());
 
     return (json, path) ->
-        getArray(json.asJsonObject(), toJsonPointer(field))
+        getArray(json, toJsonPointer(field))
             .map(
                 values ->
                     zip(values.stream(), rangeExclusive(0, values.size()))
-                        .flatMap(pair -> conditions.apply(pair.first, path + "/" + pair.second)))
+                        .flatMap(
+                            pair ->
+                                isObject(pair.first)
+                                    ? conditions.apply(json, path + "/" + pair.second)
+                                    : empty()))
             .orElseGet(Stream::empty);
   }
 
-  private Condition conditions(final String field, final JsonObject conditions) {
+  private Condition conditionsObject(final JsonObject conditions) {
     final List<Condition> c =
         getObjects(conditions, CONDITIONS).map(this::condition).collect(toList());
 
-    return (json, path) ->
-        (Stream<JsonValue>)
-            to(ofNullable(field)
-                    .flatMap(f -> getValue(json.asJsonObject(), toJsonPointer(f)))
-                    .orElse(json))
-                .apply(j -> c.stream().flatMap(condition -> condition.apply(j, path)));
+    return (json, path) -> c.stream().flatMap(condition -> condition.apply(json, path));
   }
 
   private Condition generateCondition(final JsonObject condition, final Features features) {
@@ -506,11 +429,7 @@ public class Validator {
         .flatMap(
             field -> getValue(condition, toJsonPointer(field)).map(value -> pair(field, value)))
         .filter(pair -> isConditions(pair.second) || isArray(pair.second))
-        .map(
-            pair ->
-                isConditions(pair.second)
-                    ? conditions(pair.first, pair.second.asJsonObject())
-                    : conditionArray(pair.first, pair.second.asJsonArray()))
+        .map(pair -> conditions(pair.first, pair.second))
         .orElseGet(() -> condition(condition, condition.getString(CODE, null), features));
   }
 
@@ -523,7 +442,7 @@ public class Validator {
    * @since 1.4.1
    */
   public JsonObject load(final String source) {
-    return load(source, (File) null);
+    return load(source, (String) null);
   }
 
   /**
@@ -537,7 +456,23 @@ public class Validator {
    * @since 1.4.1
    */
   public JsonObject load(final String source, final File baseDirectory) {
-    return loadRef(source, loaded, baseDirectory);
+    return load(source, ofNullable(baseDirectory).map(File::getAbsolutePath).orElse(null));
+  }
+
+  /**
+   * Loads and resolves a validation specification.
+   *
+   * @param source either a filename or a class path resource, in which case <code>source</code>
+   *     should start with "resource:".
+   * @param context the context to resolve relative references with. It may be <code>null</code>.
+   * @return The specification.
+   * @since 2.2
+   */
+  public JsonObject load(final String source, final String context) {
+    return resolver
+        .apply(source, context)
+        .map(resolved -> resolve(resolved.specification, resolver, resolved.source))
+        .orElse(null);
   }
 
   /**
@@ -548,7 +483,7 @@ public class Validator {
    * @since 1.4.1
    */
   public JsonObject resolve(final JsonObject specification) {
-    return resolve(specification, null);
+    return resolve(specification, (String) null);
   }
 
   /**
@@ -561,7 +496,20 @@ public class Validator {
    * @since 1.4.1
    */
   public JsonObject resolve(final JsonObject specification, final File baseDirectory) {
-    return resolve(specification, loaded, baseDirectory);
+    return resolve(
+        specification, ofNullable(baseDirectory).map(File::getAbsolutePath).orElse(null));
+  }
+
+  /**
+   * When a validation specification includes other specifications they are resolved recursively.
+   *
+   * @param specification the validation specification.
+   * @param context the context to resolve relative references with. It may be <code>null</code>.
+   * @return the resolved validation specification.
+   * @since 2.2
+   */
+  public JsonObject resolve(final JsonObject specification, final String context) {
+    return resolve(specification, resolver, context);
   }
 
   /**
@@ -574,11 +522,11 @@ public class Validator {
    * @since 1.3
    */
   public Function<JsonObject, JsonArray> validator(final String source) {
-    return validator(loadRef(source, loaded, isResource(source) ? null : new File(source)));
+    return validator(load(source));
   }
 
   /**
-   * Generates a validator with the specification, which should be fully resolved.
+   * Generates a validator with the specification. It will be resolved first.
    *
    * @param specification the validation specification.
    * @return An array with the fields <code>location</code>, which is a JSON pointer, and <code>code
@@ -586,7 +534,7 @@ public class Validator {
    * @since 1.4.1
    */
   public Function<JsonObject, JsonArray> validator(final JsonObject specification) {
-    final Condition conditions = conditions(null, specification);
+    final Condition conditions = conditionsObject(resolve(specification));
 
     return json ->
         conditions
@@ -595,5 +543,30 @@ public class Validator {
             .build();
   }
 
-  private interface Condition extends BiFunction<JsonValue, String, Stream<JsonValue>> {}
+  private interface Condition extends BiFunction<JsonObject, String, Stream<JsonValue>> {}
+
+  /**
+   * The first argument of the function is the source that has to be resolved. The second argument
+   * is the context in which the resolution happens. The context may be the outer context that is
+   * passed through the API or the resolved source of another specification. The function returns
+   * the resolved specification.
+   *
+   * @since 2.2
+   */
+  public interface Resolver extends BiFunction<String, String, Optional<Resolved>> {}
+
+  /**
+   * This represents a specification with its resolved source.
+   *
+   * @since 2.2
+   */
+  public static class Resolved {
+    final String source;
+    final JsonObject specification;
+
+    public Resolved(final JsonObject specification, final String source) {
+      this.specification = specification;
+      this.source = source;
+    }
+  }
 }

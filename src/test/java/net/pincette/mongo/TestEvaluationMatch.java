@@ -47,8 +47,16 @@ class TestEvaluationMatch {
   }
 
   @Test
-  @DisplayName("$regex")
-  void regexTest() {
+  @DisplayName("$regex false")
+  void regexTestFalse() {
+    assertFalse(predicate(regex("test", ".*se.*")).test(o(f("test", v("test")))));
+    assertFalse(predicate(in("test", "/tt/", "/se/")).test(o(f("test", v("test")))));
+    assertFalse(predicate(o(f("test", o(f("$not", v("/es/")))))).test(o(f("test", v("test")))));
+  }
+
+  @Test
+  @DisplayName("$regex true")
+  void regexTestTrue() {
     assertTrue(predicate(regex("test", "es")).test(o(f("test", v("test")))));
     assertTrue(predicate(o(f("test", o(f("$regex", v("es")))))).test(o(f("test", v("test")))));
     assertTrue(predicate(regex("test", "ES", "i")).test(o(f("test", v("test")))));
@@ -57,12 +65,9 @@ class TestEvaluationMatch {
     assertTrue(predicate(regex("test", "^te")).test(o(f("test", v("test")))));
     assertTrue(predicate(regex("test", "st$")).test(o(f("test", v("test")))));
     assertTrue(predicate(regex("test", "t.*T", "is")).test(o(f("test", v("te\nst")))));
-    assertFalse(predicate(regex("test", ".*se.*")).test(o(f("test", v("test")))));
     assertTrue(predicate(in("test", "/t.*T/i", "/es/")).test(o(f("test", v("test")))));
     assertTrue(predicate(in("test", "test", "/se/")).test(o(f("test", v("test")))));
-    assertFalse(predicate(in("test", "/tt/", "/se/")).test(o(f("test", v("test")))));
     assertTrue(predicate(o(f("test", o(f("$not", v("/se/")))))).test(o(f("test", v("test")))));
-    assertFalse(predicate(o(f("test", o(f("$not", v("/es/")))))).test(o(f("test", v("test")))));
     assertTrue(
         predicate(
                 regex(

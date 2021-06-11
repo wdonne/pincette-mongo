@@ -1,0 +1,12 @@
+{
+  "title": "field1",
+  "conditions": [
+    {
+      "field1": {
+        "$exists": true
+      },
+      "$code": "REQUIRED",
+      "$comment": "field1 should exist"
+    }
+  ]
+}

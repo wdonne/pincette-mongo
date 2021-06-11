@@ -1,0 +1,30 @@
+{
+  "title": "Validator test1",
+  "include": [
+    "../../common/macros.json"
+  ],
+  "macros": {
+    "field2": {
+      "field2": [
+        {
+          "ref": "../../common/object.json"
+        }
+      ]
+    }
+  },
+  "conditions": [
+    {
+      "field1": "_long_",
+      "$code": "LONG",
+      "$comment": "Should be a long integer"
+    },
+    "_field2_",
+    {
+      "field2": {
+        "$exists": true
+      },
+      "$code": "REQUIRED",
+      "$comment": "field2 must be present"
+    }
+  ]
+}
