@@ -1,7 +1,7 @@
 package net.pincette.mongo;
 
-import static net.pincette.mongo.Util.wrap;
-import static net.pincette.mongo.Util.wrapList;
+import static net.pincette.rs.Util.asListAsync;
+import static net.pincette.rs.Util.asValueAsync;
 
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.model.BulkWriteOptions;
@@ -31,7 +31,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
-import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.reactivestreams.Publisher;
 
@@ -119,23 +118,23 @@ public class Collection {
     return exec(collection, c -> c.countDocuments(session));
   }
 
-  public static CompletionStage<Long> countDocuments(
-      final MongoCollection<Document> collection, final Bson filter) {
+  public static <D> CompletionStage<Long> countDocuments(
+      final MongoCollection<D> collection, final Bson filter) {
     return exec(collection, c -> c.countDocuments(filter));
   }
 
-  public static CompletionStage<Long> countDocuments(
-      final MongoCollection<Document> collection, final ClientSession session, final Bson filter) {
+  public static <D> CompletionStage<Long> countDocuments(
+      final MongoCollection<D> collection, final ClientSession session, final Bson filter) {
     return exec(collection, c -> c.countDocuments(session, filter));
   }
 
-  public static CompletionStage<Long> countDocuments(
-      final MongoCollection<Document> collection, final Bson filter, final CountOptions options) {
+  public static <D> CompletionStage<Long> countDocuments(
+      final MongoCollection<D> collection, final Bson filter, final CountOptions options) {
     return exec(collection, c -> c.countDocuments(filter, options));
   }
 
-  public static CompletionStage<Long> countDocuments(
-      final MongoCollection<Document> collection,
+  public static <D> CompletionStage<Long> countDocuments(
+      final MongoCollection<D> collection,
       final ClientSession session,
       final Bson filter,
       final CountOptions options) {
@@ -256,7 +255,7 @@ public class Collection {
    */
   public static <T, D> CompletionStage<T> exec(
       final MongoCollection<D> collection, final Function<MongoCollection<D>, Publisher<T>> op) {
-    return wrap(() -> op.apply(collection));
+    return asValueAsync(op.apply(collection));
   }
 
   /**
@@ -271,7 +270,7 @@ public class Collection {
    */
   public static <T, D> CompletionStage<List<T>> execList(
       final MongoCollection<D> collection, final Function<MongoCollection<D>, Publisher<T>> op) {
-    return wrapList(() -> op.apply(collection));
+    return asListAsync(op.apply(collection));
   }
 
   public static <D> CompletionStage<List<D>> find(

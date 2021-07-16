@@ -16,20 +16,13 @@ import static net.pincette.json.JsonUtil.isObject;
 import static net.pincette.json.JsonUtil.isString;
 import static net.pincette.util.Pair.pair;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.function.Supplier;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
-import net.pincette.rs.LambdaSubscriber;
 import net.pincette.util.Pair;
-import org.reactivestreams.Publisher;
 
 /**
  * Some utilities.
@@ -61,17 +54,6 @@ public class Util {
         Optional.of(typeValue(v1) - typeValue(v2))
             .filter(result -> result != 0)
             .orElseGet(() -> Cmp.compare(v1, v2)));
-  }
-
-  private static <T> LambdaSubscriber<T> completer(final CompletableFuture<T> future) {
-    return new LambdaSubscriber<>(future::complete, () -> {}, future::completeExceptionally);
-  }
-
-  private static <T> LambdaSubscriber<T> completerList(final CompletableFuture<List<T>> future) {
-    final List<T> result = new ArrayList<>();
-
-    return new LambdaSubscriber<>(
-        result::add, () -> future.complete(result), future::completeExceptionally);
   }
 
   static Optional<String> key(final JsonObject expression) {
@@ -137,21 +119,5 @@ public class Util {
     final Pair<JsonValue, Boolean> unwrapped = unwrapTrace((JsonValue) expression);
 
     return pair(unwrapped.first.asJsonObject(), unwrapped.second);
-  }
-
-  static <T> CompletionStage<T> wrap(final Supplier<Publisher<T>> publisher) {
-    final CompletableFuture<T> future = new CompletableFuture<>();
-
-    publisher.get().subscribe(completer(future));
-
-    return future;
-  }
-
-  static <T> CompletionStage<List<T>> wrapList(final Supplier<Publisher<T>> publisher) {
-    final CompletableFuture<List<T>> future = new CompletableFuture<>();
-
-    publisher.get().subscribe(completerList(future));
-
-    return future;
   }
 }
