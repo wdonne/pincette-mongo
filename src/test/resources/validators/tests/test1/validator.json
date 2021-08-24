@@ -14,6 +14,11 @@
       "field2": {
         "ref": "../../common/object.json"
       }
+    },
+    {
+      "field3": "_int_",
+      "$code": "INT",
+      "$comment": "Should be an integer"
     }
   ]
 }

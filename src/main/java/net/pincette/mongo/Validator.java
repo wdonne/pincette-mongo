@@ -65,7 +65,9 @@ import net.pincette.util.Pair;
  *       has an object with only the field <code>ref</code> as its value, then the conditions
  *       referred to by <code>ref</code> will be applied to the field. If it is an array with such a
  *       ref object, then the value is first checked to be an array and the referred conditions will
- *       be applied to the objects in the array.
+ *       be applied to the objects in the array. When a condition is an expression for a field it
+ *       will be tested only when that field is present and the condition is not a <code>$exists
+ *       </code> expression.
  *   <dt>description
  *   <dd>A short string describing the specification.
  *   <dt>include
@@ -147,6 +149,7 @@ public class Validator {
   private static final String DESCRIPTION = "description";
   private static final String ERROR_CODE = "code";
   private static final String ERROR_LOCATION = "location";
+  private static final String EXISTS = "$exists";
   private static final String INCLUDE = "include";
   private static final String LOCATION = "$location";
   private static final String MACROS = "macros";
@@ -220,12 +223,22 @@ public class Validator {
 
   private static Condition condition(
       final JsonObject condition, final String code, final Features features) {
-    final String conditionPath =
-        ofNullable(getField(condition)).map(JsonUtil::toJsonPointer).orElse("");
+    final String field = getField(condition);
+    final String conditionPath = ofNullable(field).map(JsonUtil::toJsonPointer).orElse("");
+    final boolean isExists = field != null && isExists(condition.get(field));
     final Predicate<JsonObject> test = predicate(strip(condition), features);
 
     return (json, path) ->
-        test.test(testObject(json, path, conditionPath)) ? empty() : of(createError(path, code));
+        Optional.of(testObject(json, path, conditionPath))
+                .map(
+                    j ->
+                        (!conditionPath.equals("")
+                                && !isExists
+                                && !getValue(j, conditionPath).isPresent())
+                            || test.test(testObject(json, path, conditionPath)))
+                .orElse(false)
+            ? empty()
+            : of(createError(path, code));
   }
 
   private static JsonObject createError(final String path, final String code) {
@@ -310,6 +323,14 @@ public class Validator {
 
   private static boolean isConditions(final JsonValue value) {
     return isObject(value) && value.asJsonObject().containsKey(CONDITIONS);
+  }
+
+  private static boolean isExists(final JsonValue expression) {
+    return Optional.of(expression)
+        .filter(JsonUtil::isObject)
+        .map(JsonValue::asJsonObject)
+        .filter(json -> json.containsKey(EXISTS))
+        .isPresent();
   }
 
   private static boolean isMacroRef(final JsonValue value) {

@@ -440,6 +440,36 @@ public class Collection {
     return exec(collection, c -> c.findOneAndUpdate(session, filter, update, options));
   }
 
+  public static <D> CompletionStage<D> findOneAndUpdate(
+      final MongoCollection<D> collection, final Bson filter, final List<? extends Bson> update) {
+    return exec(collection, c -> c.findOneAndUpdate(filter, update));
+  }
+
+  public static <D> CompletionStage<D> findOneAndUpdate(
+      final MongoCollection<D> collection,
+      final ClientSession session,
+      final Bson filter,
+      final List<? extends Bson> update) {
+    return exec(collection, c -> c.findOneAndUpdate(session, filter, update));
+  }
+
+  public static <D> CompletionStage<D> findOneAndUpdate(
+      final MongoCollection<D> collection,
+      final Bson filter,
+      final List<? extends Bson> update,
+      final FindOneAndUpdateOptions options) {
+    return exec(collection, c -> c.findOneAndUpdate(filter, update, options));
+  }
+
+  public static <D> CompletionStage<D> findOneAndUpdate(
+      final MongoCollection<D> collection,
+      final ClientSession session,
+      final Bson filter,
+      final List<? extends Bson> update,
+      final FindOneAndUpdateOptions options) {
+    return exec(collection, c -> c.findOneAndUpdate(session, filter, update, options));
+  }
+
   public static <D> CompletionStage<InsertManyResult> insertMany(
       final MongoCollection<D> collection, final List<? extends D> documents) {
     return exec(collection, c -> c.insertMany(documents));
@@ -630,6 +660,36 @@ public class Collection {
       final ClientSession session,
       final Bson filter,
       final Bson update,
+      final UpdateOptions options) {
+    return exec(collection, c -> c.updateOne(session, filter, update, options));
+  }
+
+  public static <D> CompletionStage<UpdateResult> updateOne(
+      final MongoCollection<D> collection, final Bson filter, final List<? extends Bson> update) {
+    return exec(collection, c -> c.updateOne(filter, update));
+  }
+
+  public static <D> CompletionStage<UpdateResult> updateOne(
+      final MongoCollection<D> collection,
+      final ClientSession session,
+      final Bson filter,
+      final List<? extends Bson> update) {
+    return exec(collection, c -> c.updateOne(session, filter, update));
+  }
+
+  public static <D> CompletionStage<UpdateResult> updateOne(
+      final MongoCollection<D> collection,
+      final Bson filter,
+      final List<? extends Bson> update,
+      final UpdateOptions options) {
+    return exec(collection, c -> c.updateOne(filter, update, options));
+  }
+
+  public static <D> CompletionStage<UpdateResult> updateOne(
+      final MongoCollection<D> collection,
+      final ClientSession session,
+      final Bson filter,
+      final List<? extends Bson> update,
       final UpdateOptions options) {
     return exec(collection, c -> c.updateOne(session, filter, update, options));
   }

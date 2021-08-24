@@ -36,7 +36,21 @@ class TestValidator {
                         f("sub2", o(f("field1", v(1)), f("field2", v("b@re.be")))))))));
 
     assertEquals(
-        a(o(f("location", v("/field1")), f("code", v("BOOL")))),
+        emptyArray(),
+        check.apply(
+            o(
+                f("field1", v(true)),
+                f(
+                    "field2",
+                    o(
+                        f("field1", v("test")),
+                        f("sub1", o(f("field1", v(0)), f("field2", v("a@re.be")))),
+                        f("sub2", o(f("field1", v(1)), f("field2", v("b@re.be")))))))));
+
+    assertEquals(
+        a(
+            o(f("location", v("/field1")), f("code", v("BOOL"))),
+            o(f("location", v("/field3")), f("code", v("INT")))),
         check.apply(
             o(
                 f("field1", v("test")),
@@ -46,7 +60,8 @@ class TestValidator {
                         f("field1", v("test")),
                         f("field2", v(false)),
                         f("sub1", o(f("field1", v(0)), f("field2", v("a@re.be")))),
-                        f("sub2", o(f("field1", v(1)), f("field2", v("b@re.be")))))))));
+                        f("sub2", o(f("field1", v(1)), f("field2", v("b@re.be")))))),
+                f("field3", v(false)))));
 
     assertEquals(
         a(o(f("location", v("/field2/sub2/field2")), f("code", v("EMAIL")))),
@@ -62,9 +77,7 @@ class TestValidator {
                         f("sub2", o(f("field1", v(1)), f("field2", v("test")))))))));
 
     assertEquals(
-        a(
-            o(f("location", v("/field1")), f("code", v("REQUIRED"))),
-            o(f("location", v("/field1")), f("code", v("BOOL")))),
+        a(o(f("location", v("/field1")), f("code", v("REQUIRED")))),
         check.apply(
             o(
                 f(
