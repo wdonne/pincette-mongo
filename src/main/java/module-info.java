@@ -8,6 +8,6 @@ module net.pincette.mongo {
   requires net.pincette.rs;
   requires org.mongodb.driver.core;
   requires org.mongodb.driver.reactivestreams;
-  requires jslt;
+  requires com.schibsted.spt.data.jslt;
   exports net.pincette.mongo;
 }
