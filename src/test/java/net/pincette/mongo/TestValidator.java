@@ -23,7 +23,7 @@ class TestValidator {
         validator.validator("resource:/validators/tests/test1/validator.json");
 
     assertEquals(
-        emptyArray(),
+        a(o(f("location", v("/field2/sub2/field3/href")))),
         check.apply(
             o(
                 f("field1", v(true)),
@@ -33,7 +33,13 @@ class TestValidator {
                         f("field1", v("test")),
                         f("field2", v(false)),
                         f("sub1", o(f("field1", v(0)), f("field2", v("a@re.be")))),
-                        f("sub2", o(f("field1", v(1)), f("field2", v("b@re.be")))))))));
+                        f(
+                            "sub2",
+                            o(
+                                f("field1", v(1)),
+                                f("field2", v("b@re.be")),
+                                f("field3", o(f("href", v("aa")))))))),
+                f("field4", o(f("href", v("/a/b")))))));
 
     assertEquals(
         emptyArray(),
@@ -46,6 +52,18 @@ class TestValidator {
                         f("field1", v("test")),
                         f("sub1", o(f("field1", v(0)), f("field2", v("a@re.be")))),
                         f("sub2", o(f("field1", v(1)), f("field2", v("b@re.be")))))))));
+
+    assertEquals(
+        emptyArray(),
+        check.apply(
+            o(
+                f("field1", v(true)),
+                f(
+                    "field2",
+                    o(
+                        f("field1", v("test")),
+                        f("field2", v(false)),
+                        f("sub1", o(f("field1", v(0)), f("field2", v("a@re.be")))))))));
 
     assertEquals(
         a(

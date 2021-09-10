@@ -25,6 +25,9 @@
       "$comment": "Should be an e-mail"
     },
     {
+      "field3": "_link_"
+    },
+    {
       "$and": [
         {
           "field1": {
@@ -36,7 +39,9 @@
             "$lt": 100000
           }
         }
-      ]
+      ],
+      "$code": "FIELD1",
+      "$comment": "field1 should be between 0 and 100000"
     }
   ]
 }

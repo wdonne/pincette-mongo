@@ -19,6 +19,9 @@
       "field3": "_int_",
       "$code": "INT",
       "$comment": "Should be an integer"
+    },
+    {
+      "field4": "_link_"
     }
   ]
 }

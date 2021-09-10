@@ -31,6 +31,7 @@ import static net.pincette.util.Pair.pair;
 import static net.pincette.util.StreamUtil.rangeExclusive;
 import static net.pincette.util.StreamUtil.zip;
 import static net.pincette.util.Util.getLastSegment;
+import static net.pincette.util.Util.getParent;
 
 import java.io.File;
 import java.util.HashMap;
@@ -162,7 +163,7 @@ public class Validator {
           entry -> Optional.empty());
   private final Map<JsonObject, Condition> conditionCache = new HashMap<>();
   private final Features features;
-  private final Resolver resolver;
+  private Resolver resolver;
 
   public Validator() {
     this(null);
@@ -189,7 +190,7 @@ public class Validator {
    */
   public Validator(final Features features, final Resolver resolver) {
     this.features = features;
-    this.resolver = resolver != null ? resolver : new SourceResolver()::resolve;
+    setResolver(resolver != null ? resolver : new SourceResolver()::resolve);
   }
 
   private static Transformer arrayExpander(final JsonObject macros) {
@@ -232,7 +233,9 @@ public class Validator {
         Optional.of(testObject(json, path, conditionPath))
                 .map(
                     j ->
-                        (!conditionPath.equals("")
+                        (!conditionPath.equals("") && !parentExists(json, path))
+                            || (conditionPath.equals("") && !getValue(json, path).isPresent())
+                            || (!conditionPath.equals("")
                                 && !isExists
                                 && !getValue(j, conditionPath).isPresent())
                             || test.test(testObject(json, path, conditionPath)))
@@ -357,6 +360,14 @@ public class Validator {
 
   private static JsonObject macros(final JsonObject specification) {
     return ofNullable(specification.getJsonObject(MACROS)).orElseGet(JsonUtil::emptyObject);
+  }
+
+  private static boolean parentExists(final JsonValue json, final String path) {
+    final String parent = getParent(path, "/");
+
+    return parent.equals("/")
+        || !isObject(json)
+        || getValue(json.asJsonObject(), parent).isPresent();
   }
 
   private static Optional<String> parentPath(final String path, final String conditionPath) {
@@ -531,6 +542,16 @@ public class Validator {
    */
   public JsonObject resolve(final JsonObject specification, final String context) {
     return resolve(specification, resolver, context);
+  }
+
+  /**
+   * Sets the include resolver.
+   *
+   * @param resolver the given resolver.
+   * @since 2.2.4
+   */
+  public void setResolver(final Resolver resolver) {
+    this.resolver = resolver;
   }
 
   /**
