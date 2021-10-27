@@ -69,7 +69,7 @@ import org.bson.conversions.Bson;
  * This class lets you apply a <a
  * href="https://docs.mongodb.com/manual/meta/aggregation-quick-reference/#expressions">MongoDB
  * expression</a> to a JSON object. The only supported variable is <code>$$NOW</code>, which is
- * returned as an IDO 8601 string. The following operators are not supported: <code>$indexOfBytes
+ * returned as an ISO 8601 string. The following operators are not supported: <code>$indexOfBytes
  * </code>, <code>$strLenBytes</code>, <code>$substrBytes</code>, <code>$toDate</code>, <code>
  * $toObjectId</code> and the date expression operators. Accumulators are also not supported. Only
  * the aggregation variables <code>$$NOW</code> and <code>$$ROOT</code> are supported. The extension

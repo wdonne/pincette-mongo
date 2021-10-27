@@ -131,7 +131,7 @@ class Types {
       case TRUE:
         return createValue("true");
       default:
-        throw new UnsupportedOperationException(value.toString() + " toString");
+        throw new UnsupportedOperationException(value + " toString");
     }
   }
 
