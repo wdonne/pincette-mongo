@@ -7,7 +7,7 @@
   <groupId>net.pincette</groupId>
   <artifactId>pincette-mongo</artifactId>
   <packaging>jar</packaging>
-  <version>3.0</version>
+  <version>3.0.1</version>
   <name>pincette-mongo</name>
   <description>MongoDB Utilities</description>
   <url>https://github.com/wdonne/pincette-mongo</url>
@@ -141,9 +141,9 @@
           </additionalJOptions>
           <links>
             <link>http://docs.oracle.com/javase/8/docs/api/</link>
-            <link>https://www.javadoc.io/doc/net.pincette/pincette-common/1.9.3/</link>
-            <link>https://www.javadoc.io/doc/net.pincette/pincette-rs/1.7.1/</link>
-            <link>https://www.javadoc.io/doc/net.pincette/pincette-json/1.6.1/</link>
+            <link>https://www.javadoc.io/doc/net.pincette/pincette-common/2.0/</link>
+            <link>https://www.javadoc.io/doc/net.pincette/pincette-rs/2.0/</link>
+            <link>https://www.javadoc.io/doc/net.pincette/pincette-json/2.0/</link>
             <link>https://www.javadoc.io/doc/javax.json/javax.json-api/1.1.4/</link>
             <link>https://www.javadoc.io/doc/org.mongodb/mongodb-driver-reactivestreams/4.3.2/
             </link>

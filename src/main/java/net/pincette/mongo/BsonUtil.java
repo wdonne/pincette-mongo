@@ -12,6 +12,8 @@ import static net.pincette.json.JsonUtil.asString;
 import static net.pincette.json.JsonUtil.createArrayBuilder;
 import static net.pincette.json.JsonUtil.createObjectBuilder;
 import static net.pincette.json.JsonUtil.createValue;
+import static net.pincette.json.JsonUtil.string;
+import static net.pincette.json.JsonUtil.stringValue;
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 
 import java.util.Map;
@@ -31,6 +33,7 @@ import org.bson.BsonInt32;
 import org.bson.BsonInt64;
 import org.bson.BsonNull;
 import org.bson.BsonNumber;
+import org.bson.BsonObjectId;
 import org.bson.BsonRegularExpression;
 import org.bson.BsonString;
 import org.bson.BsonTimestamp;
@@ -44,6 +47,7 @@ import org.bson.codecs.ValueCodecProvider;
 import org.bson.conversions.Bson;
 import org.bson.io.BasicOutputBuffer;
 import org.bson.io.OutputBuffer;
+import org.bson.types.ObjectId;
 
 /**
  * BSON utilities.
@@ -52,6 +56,8 @@ import org.bson.io.OutputBuffer;
  * @since 1.0
  */
 public class BsonUtil {
+  private static final String ID = "_id";
+
   private BsonUtil() {}
 
   public static JsonValue fromBson(final BsonValue bson) {
@@ -72,6 +78,8 @@ public class BsonUtil {
         return fromBson(bson.asInt64());
       case NULL:
         return NULL;
+      case OBJECT_ID:
+        return fromBson(bson.asObjectId());
       case REGULAR_EXPRESSION:
         return fromBson(bson.asRegularExpression());
       case STRING:
@@ -113,6 +121,10 @@ public class BsonUtil {
 
   public static JsonString fromBson(final BsonDateTime bson) {
     return asString(createValue(ofEpochMilli(bson.getValue()).toString()));
+  }
+
+  public static JsonString fromBson(final BsonObjectId bson) {
+    return asString(createValue(bson.getValue().toHexString()));
   }
 
   public static JsonObject fromBson(final BsonRegularExpression bson) {
@@ -159,7 +171,12 @@ public class BsonUtil {
     return json.entrySet().stream()
         .reduce(
             new BsonDocument(),
-            (d, e) -> d.append(e.getKey(), fromJson(e.getValue())),
+            (d, e) ->
+                d.append(
+                    e.getKey(),
+                    isObjectId(e.getKey(), e.getValue())
+                        ? fromJsonObjectId(e.getValue())
+                        : fromJson(e.getValue())),
             (d1, d2) -> d1);
   }
 
@@ -169,6 +186,29 @@ public class BsonUtil {
 
   public static BsonString fromJson(final JsonString json) {
     return new BsonString(json.getString());
+  }
+
+  private static BsonValue fromJsonObjectId(final JsonValue json) {
+    return new BsonObjectId(new ObjectId(string(json)));
+  }
+
+  private static boolean isHex(final String s) {
+    for (int i = 0; i < s.length(); ++i) {
+      if (!isHex(s.charAt(i))) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private static boolean isHex(final char c) {
+    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+  }
+
+  private static boolean isObjectId(final String key, final JsonValue value) {
+    return key.equals(ID)
+        && stringValue(value).filter(s -> s.length() == 24).filter(BsonUtil::isHex).isPresent();
   }
 
   public static BsonDocument toBsonDocument(final Bson bson) {
