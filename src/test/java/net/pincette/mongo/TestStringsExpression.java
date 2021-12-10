@@ -7,10 +7,19 @@ import static net.pincette.json.Factory.v;
 import static net.pincette.mongo.Expression.function;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import javax.json.JsonObject;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class TestStringsExpression {
+  @Test
+  @DisplayName("$base64Encode $base64Decode")
+  void base64() {
+    final String s = "dfgxuxfgjkshdbvbs\u00e9nfzfsf^$^%&^fvg";
+
+    assertEquals(v(s), function(o(f("$base64Decode", o(f("$base64Encode", v(s)))))).apply(o()));
+  }
+
   @Test
   @DisplayName("$concat")
   void concat() {
@@ -35,6 +44,14 @@ class TestStringsExpression {
     assertEquals(
         v(-1), function(o(f("$indexOfCP", a(v("testing"), v("ti"), v(3), v(3))))).apply(o()));
     assertEquals(v(-1), function(o(f("$indexOfCP", a(v("testing"), v("ti"), v(7))))).apply(o()));
+  }
+
+  @Test
+  @DisplayName("$jsonToString $stringToJson")
+  void json() {
+    final JsonObject o = o(f("test1", v("s")), f("test2", v(0)));
+
+    assertEquals(o, function(o(f("$stringToJson", o(f("$jsonToString", o))))).apply(o()));
   }
 
   @Test
@@ -230,5 +247,13 @@ class TestStringsExpression {
     assertEquals(
         v(" a "),
         function(o(f("$trim", o(f("input", v("zyx a xyz")), f("chars", v("xyz")))))).apply(o()));
+  }
+
+  @Test
+  @DisplayName("$uriEncode $uriDecode")
+  void uri() {
+    final String s = "dfgxuxfgjkshdbvbs\u00e9nfzfsf^$^%&^fvg";
+
+    assertEquals(v(s), function(o(f("$uriDecode", o(f("$uriEncode", v(s)))))).apply(o()));
   }
 }

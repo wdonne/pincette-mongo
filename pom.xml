@@ -7,7 +7,7 @@
   <groupId>net.pincette</groupId>
   <artifactId>pincette-mongo</artifactId>
   <packaging>jar</packaging>
-  <version>3.0.1</version>
+  <version>3.1</version>
   <name>pincette-mongo</name>
   <description>MongoDB Utilities</description>
   <url>https://github.com/wdonne/pincette-mongo</url>
@@ -55,12 +55,12 @@
     <dependency>
       <groupId>org.mongodb</groupId>
       <artifactId>bson</artifactId>
-      <version>4.3.2</version>
+      <version>4.4.0</version>
     </dependency>
     <dependency>
       <groupId>org.mongodb</groupId>
       <artifactId>mongodb-driver-reactivestreams</artifactId>
-      <version>4.3.2</version>
+      <version>4.4.0</version>
     </dependency>
     <dependency>
       <groupId>javax.json</groupId>
@@ -145,9 +145,9 @@
             <link>https://www.javadoc.io/doc/net.pincette/pincette-rs/2.0/</link>
             <link>https://www.javadoc.io/doc/net.pincette/pincette-json/2.0/</link>
             <link>https://www.javadoc.io/doc/javax.json/javax.json-api/1.1.4/</link>
-            <link>https://www.javadoc.io/doc/org.mongodb/mongodb-driver-reactivestreams/4.3.2/
+            <link>https://www.javadoc.io/doc/org.mongodb/mongodb-driver-reactivestreams/4.4.0/
             </link>
-            <link>https://www.javadoc.io/doc/org.mongodb/bson/4.3.2/</link>
+            <link>https://www.javadoc.io/doc/org.mongodb/bson/4.4.0/</link>
           </links>
           <sourceFileExcludes>
             <sourceFileExclude>**/module-info.java</sourceFileExclude>

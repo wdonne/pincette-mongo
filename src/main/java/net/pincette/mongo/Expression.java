@@ -120,6 +120,8 @@ public class Expression {
   private static final String ATAN = "$atan";
   private static final String ATANH = "$atanh";
   private static final String ATAN2 = "$atan2";
+  private static final String BASE64_DECODE = "$base64Decode";
+  private static final String BASE64_ENCODE = "$base64Encode";
   private static final String CEIL = "$ceil";
   private static final String CMP = "$cmp";
   private static final String CONCAT = "$concat";
@@ -145,6 +147,7 @@ public class Expression {
   private static final String INPUT = "input";
   private static final String IS_ARRAY = "$isArray";
   private static final String JSLT = "$jslt";
+  private static final String JSON_TO_STRING = "$jsonToString";
   private static final String LAST = "$last";
   private static final String LET = "$let";
   private static final String LITERAL = "$literal";
@@ -188,6 +191,7 @@ public class Expression {
   private static final String SQRT = "$sqrt";
   private static final String STR_LEN_CP = "$strLenCP";
   private static final String STRCASECMP = "$strcasecmp";
+  private static final String STRING_TO_JSON = "$stringToJson";
   private static final String SUBSTR_CP = "$substrCP";
   private static final String SUBTRACT = "$subtract";
   private static final String SWITCH = "$switch";
@@ -205,6 +209,8 @@ public class Expression {
   private static final String TRUNC = "$trunc";
   private static final String TYPE = "$type";
   private static final String UNESCAPE = "$unescape";
+  private static final String URI_DECODE = "$uriDecode";
+  private static final String URI_ENCODE = "$uriEncode";
   private static final String VARS = "vars";
   private static final String ZIP = "$zip";
   private static final Map<String, Operator> ARITHMETIC =
@@ -271,8 +277,11 @@ public class Expression {
           pair(SET_UNION, Sets::setUnion));
   private static final Map<String, Operator> STRINGS =
       map(
+          pair(BASE64_DECODE, Strings::base64Decode),
+          pair(BASE64_ENCODE, Strings::base64Encode),
           pair(CONCAT, Strings::concat),
           pair(INDEX_OF_CP, Strings::indexOfCP),
+          pair(JSON_TO_STRING, Strings::jsonToString),
           pair(LTRIM, Strings::ltrim),
           pair(REGEX_FIND, Strings::regexFind),
           pair(REGEX_FIND_ALL, Strings::regexFindAll),
@@ -281,10 +290,13 @@ public class Expression {
           pair(SPLIT, Strings::split),
           pair(STR_LEN_CP, Strings::strLenCP),
           pair(STRCASECMP, Strings::strcasecmp),
+          pair(STRING_TO_JSON, Strings::stringToJson),
           pair(SUBSTR_CP, Strings::substrCP),
           pair(TO_LOWER, Strings::toLower),
           pair(TO_UPPER, Strings::toUpper),
-          pair(TRIM, Strings::trim));
+          pair(TRIM, Strings::trim),
+          pair(URI_DECODE, Strings::uriDecode),
+          pair(URI_ENCODE, Strings::uriEncode));
   private static final Map<String, Operator> TRIGONOMETRY =
       map(
           pair(ACOS, Trigonometry::acos),

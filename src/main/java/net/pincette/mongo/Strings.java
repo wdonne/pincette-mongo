@@ -3,7 +3,12 @@ package net.pincette.mongo;
 import static java.lang.Character.isWhitespace;
 import static java.lang.Integer.min;
 import static java.lang.String.join;
+import static java.net.URLDecoder.decode;
+import static java.net.URLEncoder.encode;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.stream;
+import static java.util.Base64.getDecoder;
+import static java.util.Base64.getEncoder;
 import static java.util.regex.Pattern.quote;
 import static java.util.stream.Stream.empty;
 import static javax.json.JsonValue.NULL;
@@ -11,6 +16,7 @@ import static net.pincette.json.JsonUtil.asInt;
 import static net.pincette.json.JsonUtil.asString;
 import static net.pincette.json.JsonUtil.createObjectBuilder;
 import static net.pincette.json.JsonUtil.createValue;
+import static net.pincette.json.JsonUtil.from;
 import static net.pincette.json.JsonUtil.isNumber;
 import static net.pincette.json.JsonUtil.isString;
 import static net.pincette.mongo.Expression.applyImplementations;
@@ -28,6 +34,8 @@ import static net.pincette.util.Collections.list;
 import static net.pincette.util.StreamUtil.rangeInclusive;
 import static net.pincette.util.StreamUtil.takeWhile;
 
+import java.util.Base64.Decoder;
+import java.util.Base64.Encoder;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -49,6 +57,19 @@ class Strings {
   private static final String REGEX = "regex";
 
   private Strings() {}
+
+  static Implementation base64Decode(final JsonValue value, final Features features) {
+    final Decoder decoder = getDecoder();
+
+    return string(
+        value, s -> createValue(new String(decoder.decode(s.getBytes(UTF_8)), UTF_8)), features);
+  }
+
+  static Implementation base64Encode(final JsonValue value, final Features features) {
+    final Encoder encoder = getEncoder();
+
+    return string(value, s -> createValue(encoder.encodeToString(s.getBytes(UTF_8))), features);
+  }
 
   private static JsonObject capture(final Matcher matcher) {
     return createObjectBuilder()
@@ -74,6 +95,12 @@ class Strings {
     return matcher.groupCount() > 0
         ? rangeInclusive(1, matcher.groupCount()).map(matcher::group)
         : empty();
+  }
+
+  static Implementation jsonToString(final JsonValue value, final Features features) {
+    final Implementation implementation = implementation(value, features);
+
+    return (json, vars) -> createValue(JsonUtil.string(implementation.apply(json, vars)));
   }
 
   static Implementation indexOfCP(final JsonValue value, final Features features) {
@@ -203,6 +230,10 @@ class Strings {
             .orElse(NULL);
   }
 
+  static Implementation stringToJson(final JsonValue value, final Features features) {
+    return string(value, s -> from(s).map(JsonValue.class::cast).orElse(NULL), features);
+  }
+
   private static Implementation stringTwo(
       final JsonValue value,
       final BiFunction<String, String, JsonValue> op,
@@ -293,5 +324,13 @@ class Strings {
       ;
 
     return i;
+  }
+
+  static Implementation uriDecode(final JsonValue value, final Features features) {
+    return string(value, s -> createValue(decode(s, UTF_8)), features);
+  }
+
+  static Implementation uriEncode(final JsonValue value, final Features features) {
+    return string(value, s -> createValue(encode(s, UTF_8)), features);
   }
 }

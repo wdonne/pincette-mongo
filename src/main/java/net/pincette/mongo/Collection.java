@@ -24,7 +24,6 @@ import com.mongodb.reactivestreams.client.AggregatePublisher;
 import com.mongodb.reactivestreams.client.ClientSession;
 import com.mongodb.reactivestreams.client.DistinctPublisher;
 import com.mongodb.reactivestreams.client.FindPublisher;
-import com.mongodb.reactivestreams.client.MapReducePublisher;
 import com.mongodb.reactivestreams.client.MongoCollection;
 import java.util.List;
 import java.util.Optional;
@@ -522,56 +521,6 @@ public class Collection {
 
   private static <T> Optional<T> justOne(final List<T> list) {
     return Optional.of(list).filter(l -> l.size() == 1).map(l -> l.get(0));
-  }
-
-  public static <D> CompletionStage<List<D>> mapReduce(
-      final MongoCollection<D> collection,
-      final String mapFunction,
-      final String reduceFunction,
-      final UnaryOperator<MapReducePublisher<D>> setParameters) {
-    return execList(
-        collection, c -> mapReducePub(c.mapReduce(mapFunction, reduceFunction), setParameters));
-  }
-
-  public static <D> CompletionStage<List<D>> mapReduce(
-      final MongoCollection<D> collection,
-      final ClientSession session,
-      final String mapFunction,
-      final String reduceFunction,
-      final UnaryOperator<MapReducePublisher<D>> setParameters) {
-    return execList(
-        collection,
-        c -> mapReducePub(c.mapReduce(session, mapFunction, reduceFunction), setParameters));
-  }
-
-  public static <T, D> CompletionStage<List<T>> mapReduce(
-      final MongoCollection<D> collection,
-      final String mapFunction,
-      final String reduceFunction,
-      final Class<T> resultClass,
-      final UnaryOperator<MapReducePublisher<T>> setParameters) {
-    return execList(
-        collection,
-        c -> mapReducePub(c.mapReduce(mapFunction, reduceFunction, resultClass), setParameters));
-  }
-
-  public static <T, D> CompletionStage<List<T>> mapReduce(
-      final MongoCollection<D> collection,
-      final ClientSession session,
-      final String mapFunction,
-      final String reduceFunction,
-      final Class<T> resultClass,
-      final UnaryOperator<MapReducePublisher<T>> setParameters) {
-    return execList(
-        collection,
-        c ->
-            mapReducePub(
-                c.mapReduce(session, mapFunction, reduceFunction, resultClass), setParameters));
-  }
-
-  private static <T> MapReducePublisher<T> mapReducePub(
-      final MapReducePublisher<T> pub, final UnaryOperator<MapReducePublisher<T>> setParameters) {
-    return setParameters != null ? setParameters.apply(pub) : pub;
   }
 
   public static <D> CompletionStage<UpdateResult> replaceOne(
