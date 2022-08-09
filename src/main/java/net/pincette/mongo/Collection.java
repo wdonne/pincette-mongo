@@ -2,10 +2,12 @@ package net.pincette.mongo;
 
 import static net.pincette.rs.Util.asListAsync;
 import static net.pincette.rs.Util.asValueAsync;
+import static org.reactivestreams.FlowAdapters.toFlowPublisher;
 
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.model.BulkWriteOptions;
 import com.mongodb.client.model.CountOptions;
+import com.mongodb.client.model.CreateCollectionOptions;
 import com.mongodb.client.model.DeleteOptions;
 import com.mongodb.client.model.EstimatedDocumentCountOptions;
 import com.mongodb.client.model.FindOneAndDeleteOptions;
@@ -25,11 +27,13 @@ import com.mongodb.reactivestreams.client.ClientSession;
 import com.mongodb.reactivestreams.client.DistinctPublisher;
 import com.mongodb.reactivestreams.client.FindPublisher;
 import com.mongodb.reactivestreams.client.MongoCollection;
+import com.mongodb.reactivestreams.client.MongoDatabase;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
+import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.reactivestreams.Publisher;
 
@@ -140,6 +144,24 @@ public class Collection {
     return exec(collection, c -> c.countDocuments(session, filter, options));
   }
 
+  public static CompletionStage<MongoCollection<Document>> create(
+      final MongoDatabase database, final String name) {
+    return execCreate(database, name, db -> db.createCollection(name));
+  }
+
+  public static CompletionStage<MongoCollection<Document>> create(
+      final MongoDatabase database, final String name, final CreateCollectionOptions options) {
+    return execCreate(database, name, db -> db.createCollection(name, options));
+  }
+
+  public static CompletionStage<MongoCollection<Document>> create(
+      final MongoDatabase database,
+      final ClientSession session,
+      final String name,
+      final CreateCollectionOptions options) {
+    return execCreate(database, name, db -> db.createCollection(session, name, options));
+  }
+
   public static <D> CompletionStage<DeleteResult> deleteMany(
       final MongoCollection<D> collection, final Bson filter) {
     return exec(collection, c -> c.deleteMany(filter));
@@ -232,6 +254,10 @@ public class Collection {
     return setParameters != null ? setParameters.apply(pub) : pub;
   }
 
+  public static <D> CompletionStage<Void> drop(final MongoCollection<D> collection) {
+    return exec(collection, MongoCollection::drop);
+  }
+
   public static <D> CompletionStage<Long> estimatedDocumentCount(
       final MongoCollection<D> collection) {
     return exec(collection, MongoCollection::estimatedDocumentCount);
@@ -254,7 +280,15 @@ public class Collection {
    */
   public static <T, D> CompletionStage<T> exec(
       final MongoCollection<D> collection, final Function<MongoCollection<D>, Publisher<T>> op) {
-    return asValueAsync(op.apply(collection));
+    return asValueAsync(toFlowPublisher(op.apply(collection)));
+  }
+
+  private static CompletionStage<MongoCollection<Document>> execCreate(
+      final MongoDatabase database,
+      final String name,
+      final Function<MongoDatabase, Publisher<Void>> op) {
+    return asValueAsync(toFlowPublisher(op.apply(database)))
+        .thenApply(r -> database.getCollection(name));
   }
 
   /**
@@ -269,7 +303,7 @@ public class Collection {
    */
   public static <T, D> CompletionStage<List<T>> execList(
       final MongoCollection<D> collection, final Function<MongoCollection<D>, Publisher<T>> op) {
-    return asListAsync(op.apply(collection));
+    return asListAsync(toFlowPublisher(op.apply(collection)));
   }
 
   public static <D> CompletionStage<List<D>> find(

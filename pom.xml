@@ -7,7 +7,7 @@
   <groupId>net.pincette</groupId>
   <artifactId>pincette-mongo</artifactId>
   <packaging>jar</packaging>
-  <version>3.1</version>
+  <version>4.0</version>
   <name>pincette-mongo</name>
   <description>MongoDB Utilities</description>
   <url>https://github.com/wdonne/pincette-mongo</url>
@@ -55,12 +55,12 @@
     <dependency>
       <groupId>org.mongodb</groupId>
       <artifactId>bson</artifactId>
-      <version>4.4.0</version>
+      <version>4.7.1</version>
     </dependency>
     <dependency>
       <groupId>org.mongodb</groupId>
       <artifactId>mongodb-driver-reactivestreams</artifactId>
-      <version>4.4.0</version>
+      <version>4.7.1</version>
     </dependency>
     <dependency>
       <groupId>javax.json</groupId>
@@ -70,22 +70,27 @@
     <dependency>
       <groupId>net.pincette</groupId>
       <artifactId>pincette-rs</artifactId>
-      <version>2.0.1</version>
+      <version>3.0</version>
     </dependency>
     <dependency>
       <groupId>net.pincette</groupId>
       <artifactId>pincette-common</artifactId>
-      <version>2.0</version>
+      <version>2.0.2</version>
     </dependency>
     <dependency>
       <groupId>net.pincette</groupId>
       <artifactId>pincette-json</artifactId>
-      <version>2.0</version>
+      <version>2.0.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.reactivestreams</groupId>
+      <artifactId>reactive-streams</artifactId>
+      <version>1.0.4</version>
     </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
-      <version>5.8.2</version>
+      <version>5.9.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -108,7 +113,7 @@
       <plugin>
         <groupId>org.sonatype.plugins</groupId>
         <artifactId>nexus-staging-maven-plugin</artifactId>
-        <version>1.6.8</version>
+        <version>1.6.13</version>
         <extensions>true</extensions>
         <configuration>
           <serverId>ossrh</serverId>
@@ -140,14 +145,14 @@
             </additionalJOption>
           </additionalJOptions>
           <links>
-            <link>http://docs.oracle.com/javase/8/docs/api/</link>
-            <link>https://www.javadoc.io/doc/net.pincette/pincette-common/2.0/</link>
+            <link>https://docs.oracle.com/en/java/javase/11/docs/api/</link>
+            <link>https://www.javadoc.io/doc/net.pincette/pincette-common/2.0.2/</link>
             <link>https://www.javadoc.io/doc/net.pincette/pincette-rs/2.0/</link>
-            <link>https://www.javadoc.io/doc/net.pincette/pincette-json/2.0/</link>
+            <link>https://www.javadoc.io/doc/net.pincette/pincette-json/2.0.1/</link>
             <link>https://www.javadoc.io/doc/javax.json/javax.json-api/1.1.4/</link>
-            <link>https://www.javadoc.io/doc/org.mongodb/mongodb-driver-reactivestreams/4.4.0/
+            <link>https://www.javadoc.io/doc/org.mongodb/mongodb-driver-reactivestreams/4.7.1/
             </link>
-            <link>https://www.javadoc.io/doc/org.mongodb/bson/4.4.0/</link>
+            <link>https://www.javadoc.io/doc/org.mongodb/bson/4.7.1/</link>
           </links>
           <sourceFileExcludes>
             <sourceFileExclude>**/module-info.java</sourceFileExclude>
@@ -155,6 +160,7 @@
         </configuration>
       </plugin>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.22.2</version>
         <configuration>
@@ -162,6 +168,7 @@
         </configuration>
       </plugin>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
         <version>2.22.2</version>
       </plugin>

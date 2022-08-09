@@ -15,6 +15,7 @@ import static net.pincette.rs.Reducer.forEach;
 import static net.pincette.rs.Reducer.forEachJoin;
 import static net.pincette.util.Util.must;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.reactivestreams.FlowAdapters.toFlowPublisher;
 
 import com.mongodb.reactivestreams.client.MongoCollection;
 import java.util.Optional;
@@ -45,12 +46,14 @@ class TestUpdate {
 
   private static void cleanUpCollections() {
     forEachJoin(
-        with(resources.database.listCollectionNames()).filter(name -> name.startsWith(APP)).get(),
-        name -> forEach(resources.database.getCollection(name).drop(), v -> {}));
+        with(toFlowPublisher(resources.database.listCollectionNames()))
+            .filter(name -> name.startsWith(APP))
+            .get(),
+        name -> forEach(toFlowPublisher(resources.database.getCollection(name).drop()), v -> {}));
   }
 
   protected void drop(final String collection) {
-    forEachJoin(resources.database.getCollection(collection).drop(), v -> {});
+    forEachJoin(toFlowPublisher(resources.database.getCollection(collection).drop()), v -> {});
   }
 
   @Test

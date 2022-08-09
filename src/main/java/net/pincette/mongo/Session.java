@@ -3,6 +3,7 @@ package net.pincette.mongo;
 import static net.pincette.rs.Util.asValueAsync;
 import static net.pincette.rs.Util.emptyAsync;
 import static net.pincette.util.Util.rethrow;
+import static org.reactivestreams.FlowAdapters.toFlowPublisher;
 
 import com.mongodb.TransactionOptions;
 import com.mongodb.reactivestreams.client.ClientSession;
@@ -20,15 +21,15 @@ public class Session {
   private Session() {}
 
   public static CompletionStage<Void> abortTransaction(final ClientSession session) {
-    return emptyAsync(session.abortTransaction());
+    return emptyAsync(toFlowPublisher(session.abortTransaction()));
   }
 
   public static CompletionStage<Void> commitTransaction(final ClientSession session) {
-    return emptyAsync(session.commitTransaction());
+    return emptyAsync(toFlowPublisher(session.commitTransaction()));
   }
 
   public static CompletionStage<ClientSession> create(final MongoClient client) {
-    return asValueAsync(client.startSession());
+    return asValueAsync(toFlowPublisher(client.startSession()));
   }
 
   /**

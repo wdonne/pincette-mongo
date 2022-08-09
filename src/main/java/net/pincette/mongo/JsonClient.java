@@ -26,6 +26,7 @@ import com.mongodb.reactivestreams.client.MongoCollection;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Flow.Publisher;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
@@ -34,10 +35,11 @@ import javax.json.JsonObject;
 import javax.json.JsonPatch;
 import javax.json.JsonValue;
 import net.pincette.json.JsonUtil;
+import net.pincette.rs.Util;
 import org.bson.BsonDocument;
 import org.bson.Document;
 import org.bson.conversions.Bson;
-import org.reactivestreams.Publisher;
+import org.reactivestreams.FlowAdapters;
 
 /**
  * These are convenience functions to use JSON with the MongoDB API.
@@ -279,8 +281,9 @@ public class JsonClient {
       final UnaryOperator<AggregatePublisher<BsonDocument>> setParameters) {
     return Optional.of(operation.get())
         .map(a -> setParameters != null ? setParameters.apply(a) : a)
+        .map(FlowAdapters::toFlowPublisher)
         .map(JsonClient::toJson)
-        .orElseGet(net.pincette.rs.Util::empty);
+        .orElseGet(Util::empty);
   }
 
   /**
@@ -627,8 +630,9 @@ public class JsonClient {
       final UnaryOperator<FindPublisher<BsonDocument>> setParameters) {
     return Optional.of(operation.get())
         .map(a -> setParameters != null ? setParameters.apply(a) : a)
+        .map(FlowAdapters::toFlowPublisher)
         .map(JsonClient::toJson)
-        .orElseGet(net.pincette.rs.Util::empty);
+        .orElseGet(Util::empty);
   }
 
   /**
