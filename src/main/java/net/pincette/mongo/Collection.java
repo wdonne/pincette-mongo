@@ -617,6 +617,36 @@ public class Collection {
     return exec(collection, c -> c.updateMany(session, filter, update, options));
   }
 
+  public static <D> CompletionStage<UpdateResult> updateMany(
+      final MongoCollection<D> collection, final Bson filter, final List<? extends Bson> update) {
+    return exec(collection, c -> c.updateMany(filter, update));
+  }
+
+  public static <D> CompletionStage<UpdateResult> updateMany(
+      final MongoCollection<D> collection,
+      final ClientSession session,
+      final Bson filter,
+      final List<? extends Bson> update) {
+    return exec(collection, c -> c.updateMany(session, filter, update));
+  }
+
+  public static <D> CompletionStage<UpdateResult> updateMany(
+      final MongoCollection<D> collection,
+      final Bson filter,
+      final List<? extends Bson> update,
+      final UpdateOptions options) {
+    return exec(collection, c -> c.updateMany(filter, update, options));
+  }
+
+  public static <D> CompletionStage<UpdateResult> updateMany(
+      final MongoCollection<D> collection,
+      final ClientSession session,
+      final Bson filter,
+      final List<? extends Bson> update,
+      final UpdateOptions options) {
+    return exec(collection, c -> c.updateMany(session, filter, update, options));
+  }
+
   public static <D> CompletionStage<UpdateResult> updateOne(
       final MongoCollection<D> collection, final Bson filter, final Bson update) {
     return exec(collection, c -> c.updateOne(filter, update));
