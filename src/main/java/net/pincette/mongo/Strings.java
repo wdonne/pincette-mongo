@@ -30,10 +30,10 @@ import static net.pincette.mongo.Expression.stringsOperator;
 import static net.pincette.mongo.Match.compileRegex;
 import static net.pincette.mongo.Util.normalize;
 import static net.pincette.mongo.Util.toArray;
-import static net.pincette.util.Collections.list;
 import static net.pincette.util.StreamUtil.rangeInclusive;
 import static net.pincette.util.StreamUtil.takeWhile;
 
+import java.util.ArrayList;
 import java.util.Base64.Decoder;
 import java.util.Base64.Encoder;
 import java.util.List;
@@ -145,11 +145,11 @@ class Strings {
 
   private static Implementation regex(
       final JsonValue value, final Function<Matcher, JsonValue> capture, final Features features) {
-    final List<Implementation> implementations =
-        list(
-            memberFunction(value, INPUT, features),
-            memberFunction(value, REGEX, features),
-            memberFunction(value, OPTIONS, features));
+    final List<Implementation> implementations = new ArrayList<>();
+
+    implementations.add(memberFunction(value, INPUT, features));
+    implementations.add(memberFunction(value, REGEX, features));
+    implementations.add(memberFunction(value, OPTIONS, features));
 
     return (json, vars) ->
         applyImplementations(
@@ -284,8 +284,10 @@ class Strings {
 
   private static Implementation trim(
       final JsonValue value, final boolean start, final boolean end, final Features features) {
-    final List<Implementation> implementations =
-        list(memberFunction(value, INPUT, features), memberFunction(value, CHARS, features));
+    final List<Implementation> implementations = new ArrayList<>();
+
+    implementations.add(memberFunction(value, INPUT, features));
+    implementations.add(memberFunction(value, CHARS, features));
 
     return (json, vars) ->
         applyImplementations(implementations, json, vars, fncs -> fncs.get(0) != null)
