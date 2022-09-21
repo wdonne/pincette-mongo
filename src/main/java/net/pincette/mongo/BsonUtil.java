@@ -43,6 +43,8 @@ import org.bson.codecs.BsonDocumentCodec;
 import org.bson.codecs.BsonValueCodecProvider;
 import org.bson.codecs.DocumentCodecProvider;
 import org.bson.codecs.EncoderContext;
+import org.bson.codecs.IterableCodecProvider;
+import org.bson.codecs.MapCodecProvider;
 import org.bson.codecs.ValueCodecProvider;
 import org.bson.conversions.Bson;
 import org.bson.io.BasicOutputBuffer;
@@ -215,7 +217,11 @@ public class BsonUtil {
     return bson.toBsonDocument(
         BsonDocument.class,
         fromProviders(
-            new BsonValueCodecProvider(), new ValueCodecProvider(), new DocumentCodecProvider()));
+            new BsonValueCodecProvider(),
+            new ValueCodecProvider(),
+            new DocumentCodecProvider(),
+            new IterableCodecProvider(),
+            new MapCodecProvider()));
   }
 
   public static byte[] toBytes(final BsonDocument document) {
