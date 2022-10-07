@@ -159,7 +159,7 @@ public class Validator {
   private static final Set<String> REMOVE = set(COMMENT, DESCRIPTION, TITLE);
   private static final Transformer REMOVER =
       new Transformer(
-          entry -> getLastSegment(entry.path, "\\.").map(REMOVE::contains).orElse(false),
+          entry -> getLastSegment(entry.path, ".").map(REMOVE::contains).orElse(false),
           entry -> Optional.empty());
   private final Map<JsonObject, Condition> conditionCache = new HashMap<>();
   private final Features features;
