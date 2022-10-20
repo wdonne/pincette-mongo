@@ -2,6 +2,7 @@ package net.pincette.mongo;
 
 import static java.time.Instant.ofEpochMilli;
 import static java.time.Instant.ofEpochSecond;
+import static java.time.Instant.parse;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static javax.json.JsonValue.FALSE;
@@ -14,9 +15,12 @@ import static net.pincette.json.JsonUtil.createObjectBuilder;
 import static net.pincette.json.JsonUtil.createValue;
 import static net.pincette.json.JsonUtil.string;
 import static net.pincette.json.JsonUtil.stringValue;
+import static net.pincette.util.Util.tryToGetSilent;
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 
+import java.time.Instant;
 import java.util.Map;
+import java.util.Optional;
 import javax.json.JsonArray;
 import javax.json.JsonArrayBuilder;
 import javax.json.JsonNumber;
@@ -186,8 +190,13 @@ public class BsonUtil {
     return json.isIntegral() ? new BsonInt64(json.longValue()) : new BsonDouble(json.doubleValue());
   }
 
-  public static BsonString fromJson(final JsonString json) {
-    return new BsonString(json.getString());
+  public static BsonValue fromJson(final JsonString json) {
+    return Optional.of(json.getString())
+        .flatMap(s -> tryToGetSilent(() -> parse(s)))
+        .map(Instant::toEpochMilli)
+        .map(BsonDateTime::new)
+        .map(BsonValue.class::cast)
+        .orElseGet(() -> new BsonString(json.getString()));
   }
 
   private static BsonValue fromJsonObjectId(final JsonValue json) {
