@@ -149,9 +149,13 @@ public class BsonUtil {
   }
 
   public static BsonValue fromJson(final JsonValue json) {
+    return fromJson(json, false);
+  }
+
+  private static BsonValue fromJson(final JsonValue json, final boolean asTimestamp) {
     switch (json.getValueType()) {
       case ARRAY:
-        return fromJson(json.asJsonArray());
+        return fromJson(json.asJsonArray(), asTimestamp);
       case FALSE:
         return BsonBoolean.FALSE;
       case NULL:
@@ -159,9 +163,9 @@ public class BsonUtil {
       case NUMBER:
         return fromJson(asNumber(json));
       case OBJECT:
-        return fromJson(json.asJsonObject());
+        return fromJson(json.asJsonObject(), asTimestamp);
       case STRING:
-        return fromJson(asString(json));
+        return asTimestamp ? fromJsonNew(asString(json)) : fromJson(asString(json));
       case TRUE:
         return BsonBoolean.TRUE;
       default:
@@ -170,10 +174,18 @@ public class BsonUtil {
   }
 
   public static BsonArray fromJson(final JsonArray array) {
-    return new BsonArray(array.stream().map(BsonUtil::fromJson).collect(toList()));
+    return fromJson(array, false);
+  }
+
+  private static BsonArray fromJson(final JsonArray array, final boolean asTimestamp) {
+    return new BsonArray(array.stream().map(v -> fromJson(v, asTimestamp)).collect(toList()));
   }
 
   public static BsonDocument fromJson(final JsonObject json) {
+    return fromJson(json, false);
+  }
+
+  private static BsonDocument fromJson(final JsonObject json, final boolean asTimestamp) {
     return json.entrySet().stream()
         .reduce(
             new BsonDocument(),
@@ -182,7 +194,7 @@ public class BsonUtil {
                     e.getKey(),
                     isObjectId(e.getKey(), e.getValue())
                         ? fromJsonObjectId(e.getValue())
-                        : fromJson(e.getValue())),
+                        : fromJson(e.getValue(), asTimestamp)),
             (d1, d2) -> d1);
   }
 
@@ -190,7 +202,23 @@ public class BsonUtil {
     return json.isIntegral() ? new BsonInt64(json.longValue()) : new BsonDouble(json.doubleValue());
   }
 
-  public static BsonValue fromJson(final JsonString json) {
+  public static BsonString fromJson(final JsonString json) {
+    return new BsonString(json.getString());
+  }
+
+  public static BsonArray fromJsonNew(final JsonArray array) {
+    return fromJson(array, true);
+  }
+
+  public static BsonDocument fromJsonNew(final JsonObject json) {
+    return fromJson(json, true);
+  }
+
+  public static BsonValue fromJsonNew(final JsonValue json) {
+    return fromJson(json, true);
+  }
+
+  public static BsonValue fromJsonNew(final JsonString json) {
     return Optional.of(json.getString())
         .flatMap(s -> tryToGetSilent(() -> parse(s)))
         .map(Instant::toEpochMilli)
