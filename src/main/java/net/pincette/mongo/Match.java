@@ -38,7 +38,7 @@ import static net.pincette.mongo.Cmp.compareStrings;
 import static net.pincette.mongo.Expression.function;
 import static net.pincette.mongo.Expression.isFalse;
 import static net.pincette.mongo.Util.key;
-import static net.pincette.mongo.Util.logger;
+import static net.pincette.mongo.Util.LOGGER;
 import static net.pincette.mongo.Util.unwrapTrace;
 import static net.pincette.util.Collections.map;
 import static net.pincette.util.Collections.set;
@@ -457,7 +457,7 @@ public class Match {
 
   private static boolean log(
       final JsonObject expression, final JsonObject json, final boolean result, final Level level) {
-    logger.log(
+    LOGGER.log(
         level,
         () ->
             "Expression:\n"
@@ -478,7 +478,7 @@ public class Match {
    * @since 1.3
    */
   public static Logger logger() {
-    return logger;
+    return LOGGER;
   }
 
   private static Predicate<JsonValue> lt(final JsonValue value) {

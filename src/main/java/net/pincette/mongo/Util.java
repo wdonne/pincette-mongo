@@ -14,6 +14,7 @@ import static net.pincette.json.JsonUtil.isInstant;
 import static net.pincette.json.JsonUtil.isNumber;
 import static net.pincette.json.JsonUtil.isObject;
 import static net.pincette.json.JsonUtil.isString;
+import static net.pincette.json.JsonUtil.transformFieldNames;
 import static net.pincette.util.Pair.pair;
 
 import java.util.Optional;
@@ -31,7 +32,10 @@ import net.pincette.util.Pair;
  * @since 1.3.2
  */
 public class Util {
-  static final Logger logger = getLogger("net.pincette.mongo.expressions");
+  private static final String DOLLAR = "_dollar_";
+  private static final String DOT = "_dot_";
+  static final Logger LOGGER = getLogger("net.pincette.mongo.expressions");
+  private static final String SLASH = "_slash_";
   private static final String TRACE = "$trace";
 
   private Util() {}
@@ -56,6 +60,22 @@ public class Util {
             .orElseGet(() -> Cmp.compare(v1, v2)));
   }
 
+  public static String escapeFieldName(final String name) {
+    return name.replace(".", DOT).replace("/", SLASH).replace("$", DOLLAR);
+  }
+
+  /**
+   * Unescapes field names that were escaped for MongoDB.
+   *
+   * @param json the given JSON object.
+   * @return The unescaped JSON object.
+   * @see #toMongoDB(JsonObject)
+   * @since 4.1
+   */
+  public static JsonObject fromMongoDB(final JsonObject json) {
+    return transformFieldNames(json, Util::unescapeFieldName).build();
+  }
+
   static Optional<String> key(final JsonObject expression) {
     return Optional.of(expression.keySet())
         .filter(keys -> keys.size() == 1)
@@ -68,6 +88,18 @@ public class Util {
 
   static JsonValue toArray(final Stream<JsonValue> values) {
     return values.reduce(createArrayBuilder(), JsonArrayBuilder::add, (b1, b2) -> b1).build();
+  }
+
+  /**
+   * Escapes field names that don't work in MongoDB. Dots, dollar signs and slashes are replaced
+   * with "_dot_", "_dollar_" and "_slash_" respectively.
+   *
+   * @param json the given JSON object.
+   * @return The escaped JSON object.
+   * @since 4.1
+   */
+  public static JsonObject toMongoDB(final JsonObject json) {
+    return transformFieldNames(json, Util::escapeFieldName).build();
   }
 
   private static int typeValue(final JsonValue value) {
@@ -104,6 +136,10 @@ public class Util {
     }
 
     return MAX_VALUE;
+  }
+
+  public static String unescapeFieldName(final String name) {
+    return name.replace(DOT, ".").replace(SLASH, "/").replace(DOLLAR, "$");
   }
 
   static Pair<JsonValue, Boolean> unwrapTrace(final JsonValue expression) {

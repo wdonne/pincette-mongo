@@ -29,8 +29,8 @@ import static net.pincette.json.JsonUtil.toJsonPointer;
 import static net.pincette.mongo.BsonUtil.fromBson;
 import static net.pincette.mongo.BsonUtil.toBsonDocument;
 import static net.pincette.mongo.Relational.asFunction;
+import static net.pincette.mongo.Util.LOGGER;
 import static net.pincette.mongo.Util.key;
-import static net.pincette.mongo.Util.logger;
 import static net.pincette.mongo.Util.toArray;
 import static net.pincette.mongo.Util.unwrapTrace;
 import static net.pincette.util.Collections.map;
@@ -68,8 +68,7 @@ import org.bson.conversions.Bson;
 /**
  * This class lets you apply a <a
  * href="https://docs.mongodb.com/manual/meta/aggregation-quick-reference/#expressions">MongoDB
- * expression</a> to a JSON object. The only supported variable is <code>$$NOW</code>, which is
- * returned as an ISO 8601 string. The following operators are not supported: <code>$indexOfBytes
+ * expression</a> to a JSON object. The following operators are not supported: <code>$indexOfBytes
  * </code>, <code>$strLenBytes</code>, <code>$substrBytes</code>, <code>$toDate</code>, <code>
  * $toObjectId</code> and the date expression operators. Accumulators are also not supported. Only
  * the aggregation variables <code>$$NOW</code> and <code>$$ROOT</code> are supported. The extension
@@ -82,7 +81,7 @@ import org.bson.conversions.Bson;
  * fields <code>input</code> and <code>script</code>. The former is an expression that should
  * produce a JSON value. If it is absent <code>$$ROOT</code> will be assumed. The latter is a
  * reference to a JSLT script. If the value starts with "resource:" then it is treated as a resource
- * in the class path. Otherwise it is a filename or a script. The result of the expression will be a
+ * in the class path. Otherwise, it is a filename or a script. The result of the expression will be a
  * JSON value. If the expression is just a string, then it will ba handled as a script value.
  *
  * <p>The <code>$sort</code> extension operator receives an object with the mandatory field <code>
@@ -175,6 +174,8 @@ public class Expression {
   private static final String REGEX_FIND_ALL = "$regexFindAll";
   private static final String REGEX_MATCH = "$regexMatch";
   private static final String REVERSE_ARRAY = "$reverseArray";
+  private static final String REPLACE_ALL = "$replaceAll";
+  private static final String REPLACE_ONE = "$replaceOne";
   private static final String ROOT = "$$ROOT";
   private static final String ROUND = "$round";
   private static final String RTRIM = "$rtrim";
@@ -286,6 +287,8 @@ public class Expression {
           pair(REGEX_FIND, Strings::regexFind),
           pair(REGEX_FIND_ALL, Strings::regexFindAll),
           pair(REGEX_MATCH, Strings::regexMatch),
+          pair(REPLACE_ALL, Strings::replaceAll),
+          pair(REPLACE_ONE, Strings::replaceOne),
           pair(RTRIM, Strings::rtrim),
           pair(SPLIT, Strings::split),
           pair(STR_LEN_CP, Strings::strLenCP),
@@ -664,7 +667,7 @@ public class Expression {
       final Map<String, JsonValue> variables,
       final JsonValue result,
       final Level level) {
-    logger.log(
+    LOGGER.log(
         level,
         () ->
             "Expression:\n"
@@ -687,7 +690,7 @@ public class Expression {
    * @since 1.3
    */
   public static Logger logger() {
-    return logger;
+    return LOGGER;
   }
 
   @SuppressWarnings("java:S4276") // Not compatible.

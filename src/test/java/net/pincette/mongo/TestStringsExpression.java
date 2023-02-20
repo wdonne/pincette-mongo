@@ -1,5 +1,6 @@
 package net.pincette.mongo;
 
+import static javax.json.JsonValue.NULL;
 import static net.pincette.json.Factory.a;
 import static net.pincette.json.Factory.f;
 import static net.pincette.json.Factory.o;
@@ -15,7 +16,7 @@ class TestStringsExpression {
   @Test
   @DisplayName("$base64Encode $base64Decode")
   void base64() {
-    final String s = "dfgxuxfgjkshdbvbs\u00e9nfzfsf^$^%&^fvg";
+    final String s = "dfgxuxfgjkshdbvbsénfzfsf^$^%&^fvg";
 
     assertEquals(v(s), function(o(f("$base64Decode", o(f("$base64Encode", v(s)))))).apply(o()));
   }
@@ -177,6 +178,80 @@ class TestStringsExpression {
         v(true),
         function(o(f("$regexMatch", o(f("input", v("test")), f("regex", v("/^test$/i"))))))
             .apply(o()));
+  }
+
+  @Test
+  @DisplayName("$replaceAll")
+  void replaceAll() {
+    assertEquals(
+        v("bacba"),
+        function(
+                o(
+                    f(
+                        "$replaceAll",
+                        o(f("input", v("$test")), f("find", v("ab")), f("replacement", v("ba"))))))
+            .apply(o(f("test", v("abcab")))));
+    assertEquals(
+        NULL,
+        function(
+                o(
+                    f(
+                        "$replaceAll",
+                        o(f("input", v("$tst")), f("find", v("ab")), f("replacement", v("ba"))))))
+            .apply(o(f("test", v("abcab")))));
+    assertEquals(
+        NULL,
+        function(
+                o(
+                    f(
+                        "$replaceAll",
+                        o(f("input", v("$test")), f("find", NULL), f("replacement", v("ba"))))))
+            .apply(o(f("test", v("abcab")))));
+    assertEquals(
+        NULL,
+        function(
+                o(
+                    f(
+                        "$replaceAll",
+                        o(f("input", v("$test")), f("find", v("ab")), f("replacement", NULL)))))
+            .apply(o(f("test", v("abcab")))));
+  }
+
+  @Test
+  @DisplayName("$replaceOne")
+  void replaceOne() {
+    assertEquals(
+        v("bac"),
+        function(
+                o(
+                    f(
+                        "$replaceOne",
+                        o(f("input", v("$test")), f("find", v("ab")), f("replacement", v("ba"))))))
+            .apply(o(f("test", v("abc")))));
+    assertEquals(
+        NULL,
+        function(
+                o(
+                    f(
+                        "$replaceOne",
+                        o(f("input", v("$tst")), f("find", v("ab")), f("replacement", v("ba"))))))
+            .apply(o(f("test", v("abc")))));
+    assertEquals(
+        NULL,
+        function(
+                o(
+                    f(
+                        "$replaceOne",
+                        o(f("input", v("$test")), f("find", NULL), f("replacement", v("ba"))))))
+            .apply(o(f("test", v("abc")))));
+    assertEquals(
+        NULL,
+        function(
+                o(
+                    f(
+                        "$replaceOne",
+                        o(f("input", v("$test")), f("find", v("ab")), f("replacement", NULL)))))
+            .apply(o(f("test", v("abc")))));
   }
 
   @Test

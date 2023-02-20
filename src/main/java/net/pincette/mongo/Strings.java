@@ -9,6 +9,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.stream;
 import static java.util.Base64.getDecoder;
 import static java.util.Base64.getEncoder;
+import static java.util.regex.Matcher.quoteReplacement;
 import static java.util.regex.Pattern.quote;
 import static java.util.stream.Stream.empty;
 import static javax.json.JsonValue.NULL;
@@ -50,11 +51,13 @@ import net.pincette.json.JsonUtil;
 class Strings {
   private static final String CAPTURES = "captures";
   private static final String CHARS = "chars";
+  private static final String FIND = "find";
   private static final String IDX = "idx";
   private static final String INPUT = "input";
   private static final String MATCH = "match";
   private static final String OPTIONS = "options";
   private static final String REGEX = "regex";
+  private static final String REPLACEMENT = "replacement";
 
   private Strings() {}
 
@@ -179,6 +182,44 @@ class Strings {
 
   static Implementation regexMatch(final JsonValue value, final Features features) {
     return regex(value, matcher -> createValue(matcher.find()), features);
+  }
+
+  private static Implementation replace(
+      final JsonValue value, final boolean all, final Features features) {
+    final List<Implementation> implementations = new ArrayList<>();
+
+    implementations.add(memberFunction(value, INPUT, features));
+    implementations.add(memberFunction(value, FIND, features));
+    implementations.add(memberFunction(value, REPLACEMENT, features));
+
+    return (json, vars) ->
+        applyImplementations(
+                implementations,
+                json,
+                vars,
+                fncs -> fncs.get(0) != null && fncs.get(1) != null && fncs.get(2) != null)
+            .filter(
+                values ->
+                    isString(values.get(0)) && isString(values.get(1)) && isString(values.get(2)))
+            .map(
+                values ->
+                    createValue(
+                        all
+                            ? getString(values, 0)
+                                .replace(getString(values, 1), getString(values, 2))
+                            : getString(values, 0)
+                                .replaceFirst(
+                                    quote(getString(values, 1)),
+                                    quoteReplacement(getString(values, 2)))))
+            .orElse(NULL);
+  }
+
+  static Implementation replaceAll(final JsonValue value, final Features features) {
+    return replace(value, true, features);
+  }
+
+  static Implementation replaceOne(final JsonValue value, final Features features) {
+    return replace(value, false, features);
   }
 
   static Implementation rtrim(final JsonValue value, final Features features) {
