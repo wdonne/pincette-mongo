@@ -16,7 +16,6 @@ import static net.pincette.json.JsonUtil.createValue;
 import static net.pincette.json.JsonUtil.string;
 import static net.pincette.json.JsonUtil.stringValue;
 import static net.pincette.util.Util.tryToGetSilent;
-import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 
 import java.time.Instant;
 import java.util.Map;
@@ -44,12 +43,7 @@ import org.bson.BsonTimestamp;
 import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.codecs.BsonDocumentCodec;
-import org.bson.codecs.BsonValueCodecProvider;
-import org.bson.codecs.DocumentCodecProvider;
 import org.bson.codecs.EncoderContext;
-import org.bson.codecs.IterableCodecProvider;
-import org.bson.codecs.MapCodecProvider;
-import org.bson.codecs.ValueCodecProvider;
 import org.bson.conversions.Bson;
 import org.bson.io.BasicOutputBuffer;
 import org.bson.io.OutputBuffer;
@@ -251,14 +245,7 @@ public class BsonUtil {
   }
 
   public static BsonDocument toBsonDocument(final Bson bson) {
-    return bson.toBsonDocument(
-        BsonDocument.class,
-        fromProviders(
-            new BsonValueCodecProvider(),
-            new ValueCodecProvider(),
-            new DocumentCodecProvider(),
-            new IterableCodecProvider(),
-            new MapCodecProvider()));
+    return bson.toBsonDocument();
   }
 
   public static byte[] toBytes(final BsonDocument document) {
