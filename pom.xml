@@ -7,7 +7,7 @@
   <groupId>net.pincette</groupId>
   <artifactId>pincette-mongo</artifactId>
   <packaging>jar</packaging>
-  <version>4.1.2</version>
+  <version>4.1.3</version>
   <name>pincette-mongo</name>
   <description>MongoDB Utilities</description>
   <url>https://github.com/wdonne/pincette-mongo</url>
@@ -52,12 +52,12 @@
     <dependency>
       <groupId>org.mongodb</groupId>
       <artifactId>bson</artifactId>
-      <version>4.9.1</version>
+      <version>4.10.1</version>
     </dependency>
     <dependency>
       <groupId>org.mongodb</groupId>
       <artifactId>mongodb-driver-reactivestreams</artifactId>
-      <version>4.9.1</version>
+      <version>4.10.1</version>
     </dependency>
     <dependency>
       <groupId>javax.json</groupId>
@@ -67,7 +67,7 @@
     <dependency>
       <groupId>net.pincette</groupId>
       <artifactId>pincette-rs</artifactId>
-      <version>3.1.2</version>
+      <version>3.1.3</version>
     </dependency>
     <dependency>
       <groupId>net.pincette</groupId>
@@ -87,7 +87,7 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
-      <version>5.9.2</version>
+      <version>5.9.3</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -114,7 +114,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-gpg-plugin</artifactId>
-        <version>3.0.1</version>
+        <version>3.1.0</version>
         <executions>
           <execution>
             <id>sign-artifacts</id>
@@ -138,11 +138,11 @@
             <link>https://docs.oracle.com/en/java/javase/11/docs/api/</link>
             <link>https://www.javadoc.io/doc/net.pincette/pincette-common/2.3.2/</link>
             <link>https://www.javadoc.io/doc/net.pincette/pincette-rs/3.1.2/</link>
-            <link>https://www.javadoc.io/doc/net.pincette/pincette-json/2.0.9/</link>
+            <link>https://www.javadoc.io/doc/net.pincette/pincette-json/2.1/</link>
             <link>https://www.javadoc.io/doc/javax.json/javax.json-api/1.1.4/</link>
-            <link>https://www.javadoc.io/doc/org.mongodb/mongodb-driver-reactivestreams/4.9.1/
+            <link>https://www.javadoc.io/doc/org.mongodb/mongodb-driver-reactivestreams/4.10.1/
             </link>
-            <link>https://www.javadoc.io/doc/org.mongodb/bson/4.9.1/</link>
+            <link>https://www.javadoc.io/doc/org.mongodb/bson/4.10.1/</link>
           </links>
           <sourceFileExcludes>
             <sourceFileExclude>**/module-info.java</sourceFileExclude>
@@ -152,7 +152,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.0.0</version>
+        <version>3.1.2</version>
         <configuration>
           <forkCount>0</forkCount>
         </configuration>
@@ -160,7 +160,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
-        <version>3.0.0</version>
+        <version>3.1.2</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
