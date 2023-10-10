@@ -1,22 +1,30 @@
 package net.pincette.mongo;
 
+import static com.mongodb.client.model.Aggregates.match;
 import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Filters.in;
+import static java.util.Optional.ofNullable;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static net.pincette.json.JsonUtil.createDiff;
 import static net.pincette.json.JsonUtil.createValue;
 import static net.pincette.json.JsonUtil.toNative;
+import static net.pincette.mongo.BsonUtil.fromBson;
 import static net.pincette.mongo.BsonUtil.fromJson;
+import static net.pincette.mongo.BsonUtil.toBsonDocument;
 import static net.pincette.mongo.BsonUtil.toDocument;
 import static net.pincette.mongo.Collection.exec;
 import static net.pincette.mongo.Collection.insertOne;
 import static net.pincette.mongo.Collection.replaceOne;
 import static net.pincette.rs.Chain.with;
+import static net.pincette.util.Collections.list;
+import static org.reactivestreams.FlowAdapters.toFlowPublisher;
 
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.model.BulkWriteOptions;
 import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.client.model.UpdateOneModel;
+import com.mongodb.client.model.changestream.ChangeStreamDocument;
 import com.mongodb.client.result.InsertOneResult;
 import com.mongodb.client.result.UpdateResult;
 import com.mongodb.reactivestreams.client.AggregatePublisher;
@@ -48,6 +56,8 @@ import org.reactivestreams.FlowAdapters;
  * @since 1.4
  */
 public class JsonClient {
+  private static final List<Bson> COLLECTION_CHANGES =
+      list(match(in("operationType", list("insert", "replace", "update"))));
   private static final String ID = "_id";
 
   private JsonClient() {}
@@ -284,6 +294,12 @@ public class JsonClient {
         .map(FlowAdapters::toFlowPublisher)
         .map(JsonClient::toJson)
         .orElseGet(Util::empty);
+  }
+
+  private static JsonObject changedDocument(final ChangeStreamDocument<Document> change) {
+    return ofNullable(change.getFullDocument())
+        .map(doc -> fromBson(toBsonDocument(change.getFullDocument())))
+        .orElse(null);
   }
 
   /**
@@ -896,5 +912,18 @@ public class JsonClient {
     return Patch.updateOperators(source, patch(source, target))
         .map(op -> new UpdateOneModel<Document>(eq(ID, fromJson(source.get(ID))), fromJson(op)))
         .collect(toList());
+  }
+
+  /**
+   * Returns the changes that occur in a collection.
+   *
+   * @param collection the given collection.
+   * @return The publisher with the changed documents.
+   * @since 4.2
+   */
+  public static Publisher<JsonObject> watch(final MongoCollection<Document> collection) {
+    return with(toFlowPublisher(collection.watch(COLLECTION_CHANGES)))
+        .map(JsonClient::changedDocument)
+        .get();
   }
 }

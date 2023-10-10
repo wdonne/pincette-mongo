@@ -7,7 +7,7 @@
   <groupId>net.pincette</groupId>
   <artifactId>pincette-mongo</artifactId>
   <packaging>jar</packaging>
-  <version>4.1.6</version>
+  <version>4.1.7</version>
   <name>pincette-mongo</name>
   <description>MongoDB Utilities</description>
   <url>https://github.com/wdonne/pincette-mongo</url>
@@ -67,12 +67,12 @@
     <dependency>
       <groupId>net.pincette</groupId>
       <artifactId>pincette-rs</artifactId>
-      <version>3.2.2</version>
+      <version>3.3</version>
     </dependency>
     <dependency>
       <groupId>net.pincette</groupId>
       <artifactId>pincette-common</artifactId>
-      <version>2.3.3</version>
+      <version>2.3.4</version>
     </dependency>
     <dependency>
       <groupId>net.pincette</groupId>
@@ -128,7 +128,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>3.5.0</version>
+        <version>3.6.0</version>
         <configuration>
           <additionalJOptions>
             <additionalJOption>-J-Dhttp.agent=maven-javadoc-plugin-${project.name}
@@ -137,8 +137,8 @@
           <links>
             <link>https://docs.oracle.com/en/java/javase/11/docs/api/</link>
             <link>https://www.javadoc.io/doc/net.pincette/pincette-common/2.3.3/</link>
-            <link>https://www.javadoc.io/doc/net.pincette/pincette-rs/3.2.1/</link>
-            <link>https://www.javadoc.io/doc/net.pincette/pincette-json/2.1/</link>
+            <link>https://www.javadoc.io/doc/net.pincette/pincette-rs/3.2.2/</link>
+            <link>https://www.javadoc.io/doc/net.pincette/pincette-json/2.1.1/</link>
             <link>https://www.javadoc.io/doc/javax.json/javax.json-api/1.1.4/</link>
             <link>https://www.javadoc.io/doc/org.mongodb/mongodb-driver-reactivestreams/4.10.2/
             </link>
