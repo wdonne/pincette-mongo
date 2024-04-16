@@ -1,7 +1,6 @@
 package net.pincette.mongo;
 
 import static java.util.Optional.ofNullable;
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.concat;
 import static java.util.stream.Stream.empty;
 import static java.util.stream.Stream.of;
@@ -34,6 +33,7 @@ import static net.pincette.util.Util.getLastSegment;
 import static net.pincette.util.Util.getParent;
 
 import java.io.File;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -138,7 +138,7 @@ import net.pincette.util.Pair;
  *   ]
  * }</pre>
  *
- * @author Werner Donn\u00e9
+ * @author Werner Donné
  * @since 1.3
  * @see Match
  * @see Expression
@@ -204,9 +204,7 @@ public class Validator {
       final JsonObject json, final Stream<JsonValue> included) {
     return concat(
             included,
-            ofNullable(json.getJsonArray(CONDITIONS))
-                .map(JsonArray::stream)
-                .orElseGet(Stream::empty))
+            ofNullable(json.getJsonArray(CONDITIONS)).stream().flatMap(Collection::stream))
         .reduce(createArrayBuilder(), JsonArrayBuilder::add, (b1, b2) -> b1);
   }
 
@@ -233,11 +231,11 @@ public class Validator {
         Optional.of(testObject(json, path, conditionPath))
                 .map(
                     j ->
-                        (!conditionPath.equals("") && !parentExists(json, path))
-                            || (conditionPath.equals("") && !getValue(json, path).isPresent())
-                            || (!conditionPath.equals("")
+                        (!conditionPath.isEmpty() && !parentExists(json, path))
+                            || (conditionPath.isEmpty() && getValue(json, path).isEmpty())
+                            || (!conditionPath.isEmpty()
                                 && !isExists
-                                && !getValue(j, conditionPath).isPresent())
+                                && getValue(j, conditionPath).isEmpty())
                             || test.test(testObject(json, path, conditionPath)))
                 .orElse(false)
             ? empty()
@@ -295,8 +293,8 @@ public class Validator {
   private static Optional<String> getRef(final JsonValue value) {
     return objectValue(value)
         .filter(json -> hasOnlyThisKey(json, REF))
-        .map(json -> ofNullable(json.getString(REF, null)))
-        .orElseGet(() -> getRefInArray(value));
+        .map(json -> json.getString(REF, null))
+        .or(() -> getRefInArray(value));
   }
 
   private static Optional<String> getRefInArray(final JsonValue value) {
@@ -415,7 +413,7 @@ public class Validator {
   private static JsonObject testObject(
       final JsonObject json, final String path, final String conditionPath) {
     return parentPath(path, conditionPath)
-        .filter(p -> !p.equals(""))
+        .filter(p -> !p.isEmpty())
         .flatMap(p -> getObject(json, p))
         .orElse(json);
   }
@@ -450,8 +448,7 @@ public class Validator {
   }
 
   private Condition conditionsObject(final JsonObject conditions) {
-    final List<Condition> c =
-        getObjects(conditions, CONDITIONS).map(this::condition).collect(toList());
+    final List<Condition> c = getObjects(conditions, CONDITIONS).map(this::condition).toList();
 
     return (json, path) -> c.stream().flatMap(condition -> condition.apply(json, path));
   }

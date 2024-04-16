@@ -78,32 +78,24 @@ class Types {
   }
 
   private static JsonValue convertToBoolean(final JsonValue value) {
-    switch (value.getValueType()) {
-      case NUMBER:
-        return asNumber(value).bigDecimalValue().equals(ZERO) ? FALSE : TRUE;
-      case STRING:
-        return TRUE;
-      default:
-        return value;
-    }
+    return switch (value.getValueType()) {
+      case NUMBER -> asNumber(value).bigDecimalValue().equals(ZERO) ? FALSE : TRUE;
+      case STRING -> TRUE;
+      default -> value;
+    };
   }
 
   private static JsonValue convertToDecimal(final JsonValue value) {
-    switch (value.getValueType()) {
-      case FALSE:
-        return createValue(0);
-      case NULL:
-      case NUMBER:
-        return createValue(asNumber(value).bigDecimalValue());
-      case STRING:
-        return isInstant(value)
-            ? createValue(new BigDecimal(asInstant(value).toEpochMilli()))
-            : createValue(new BigDecimal(asString(value).getString()));
-      case TRUE:
-        return createValue(1);
-      default:
-        throw new UnsupportedOperationException(value.toString() + " toDecimal");
-    }
+    return switch (value.getValueType()) {
+      case FALSE -> createValue(0);
+      case NULL, NUMBER -> createValue(asNumber(value).bigDecimalValue());
+      case STRING ->
+          isInstant(value)
+              ? createValue(new BigDecimal(asInstant(value).toEpochMilli()))
+              : createValue(new BigDecimal(asString(value).getString()));
+      case TRUE -> createValue(1);
+      default -> throw new UnsupportedOperationException(value.toString() + " toDecimal");
+    };
   }
 
   private static JsonValue convertToInteger(final JsonValue value) {
@@ -115,42 +107,30 @@ class Types {
   }
 
   private static JsonValue convertToString(final JsonValue value) {
-    switch (value.getValueType()) {
-      case FALSE:
-        return createValue("false");
-      case NULL:
-      case STRING:
-        return value;
-      case NUMBER:
-        return createValue(
-            Optional.of(asNumber(value))
-                .filter(JsonNumber::isIntegral)
-                .map(JsonNumber::longValue)
-                .map(String::valueOf)
-                .orElseGet(value::toString));
-      case TRUE:
-        return createValue("true");
-      default:
-        throw new UnsupportedOperationException(value + " toString");
-    }
+    return switch (value.getValueType()) {
+      case FALSE -> createValue("false");
+      case NULL, STRING -> value;
+      case NUMBER ->
+          createValue(
+              Optional.of(asNumber(value))
+                  .filter(JsonNumber::isIntegral)
+                  .map(JsonNumber::longValue)
+                  .map(String::valueOf)
+                  .orElseGet(value::toString));
+      case TRUE -> createValue("true");
+      default -> throw new UnsupportedOperationException(value + " toString");
+    };
   }
 
   private static UnaryOperator<JsonValue> op(final String type) {
-    switch (type) {
-      case BOOL:
-        return Types::convertToBoolean;
-      case DOUBLE:
-      case DECIMAL:
-        return Types::convertToDecimal;
-      case INT:
-        return Types::convertToInteger;
-      case LONG:
-        return Types::convertToLong;
-      case STRING_TYPE:
-        return Types::convertToString;
-      default:
-        throw new UnsupportedOperationException(type);
-    }
+    return switch (type) {
+      case BOOL -> Types::convertToBoolean;
+      case DOUBLE, DECIMAL -> Types::convertToDecimal;
+      case INT -> Types::convertToInteger;
+      case LONG -> Types::convertToLong;
+      case STRING_TYPE -> Types::convertToString;
+      default -> throw new UnsupportedOperationException(type);
+    };
   }
 
   static Implementation toBool(final JsonValue value, final Features features) {
@@ -190,21 +170,14 @@ class Types {
   }
 
   private static String toTypeString(final JsonValue value) {
-    switch (value.getValueType()) {
-      case ARRAY:
-        return ARRAY_TYPE;
-      case FALSE:
-      case TRUE:
-        return BOOL;
-      case NUMBER:
-        return toNumberTypeString(value);
-      case OBJECT:
-        return OBJECT;
-      case STRING:
-        return STRING_TYPE;
-      default:
-        return null;
-    }
+    return switch (value.getValueType()) {
+      case ARRAY -> ARRAY_TYPE;
+      case FALSE, TRUE -> BOOL;
+      case NUMBER -> toNumberTypeString(value);
+      case OBJECT -> OBJECT;
+      case STRING -> STRING_TYPE;
+      default -> null;
+    };
   }
 
   static Implementation type(final JsonValue value, final Features features) {
@@ -222,25 +195,16 @@ class Types {
   }
 
   private static String typeString(final int code) {
-    switch (code) {
-      case 1:
-        return DOUBLE;
-      case 2:
-        return STRING_TYPE;
-      case 7:
-        return OBJECT_ID;
-      case 8:
-        return BOOL;
-      case 9:
-        return DATE;
-      case 16:
-        return INT;
-      case 18:
-        return LONG;
-      case 19:
-        return DECIMAL;
-      default:
-        return null;
-    }
+    return switch (code) {
+      case 1 -> DOUBLE;
+      case 2 -> STRING_TYPE;
+      case 7 -> OBJECT_ID;
+      case 8 -> BOOL;
+      case 9 -> DATE;
+      case 16 -> INT;
+      case 18 -> LONG;
+      case 19 -> DECIMAL;
+      default -> null;
+    };
   }
 }

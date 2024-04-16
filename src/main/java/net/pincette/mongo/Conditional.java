@@ -1,6 +1,5 @@
 package net.pincette.mongo;
 
-import static java.util.stream.Collectors.toList;
 import static javax.json.JsonValue.NULL;
 import static net.pincette.json.JsonUtil.isArray;
 import static net.pincette.mongo.Expression.applyImplementations;
@@ -46,7 +45,7 @@ class Conditional {
                             pair(
                                 implementation(json.getValue("/" + CASE), features),
                                 implementation(json.getValue("/" + THEN), features)))
-                    .collect(toList()))
+                    .toList())
         .orElse(null);
   }
 

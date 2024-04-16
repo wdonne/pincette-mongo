@@ -3,7 +3,6 @@ package net.pincette.mongo;
 import static java.time.Instant.ofEpochMilli;
 import static java.time.Instant.ofEpochSecond;
 import static java.time.Instant.parse;
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static javax.json.JsonValue.FALSE;
 import static javax.json.JsonValue.NULL;
@@ -52,7 +51,7 @@ import org.bson.types.ObjectId;
 /**
  * BSON utilities.
  *
- * @author Werner Donn\u00e9
+ * @author Werner Donné
  * @since 1.0
  */
 public class BsonUtil {
@@ -172,7 +171,7 @@ public class BsonUtil {
   }
 
   private static BsonArray fromJson(final JsonArray array, final boolean asTimestamp) {
-    return new BsonArray(array.stream().map(v -> fromJson(v, asTimestamp)).collect(toList()));
+    return new BsonArray(array.stream().map(v -> fromJson(v, asTimestamp)).toList());
   }
 
   public static BsonDocument fromJson(final JsonObject json) {

@@ -1,7 +1,6 @@
 package net.pincette.mongo;
 
 import static java.time.Duration.between;
-import static java.util.stream.Collectors.toList;
 import static javax.json.JsonValue.NULL;
 import static net.pincette.json.JsonUtil.asInstant;
 import static net.pincette.json.JsonUtil.asLong;
@@ -83,7 +82,7 @@ class Arithmetic {
   }
 
   private static boolean isAddArray(final List<JsonValue> array) {
-    final List<JsonValue> values = array.stream().filter(v -> !isNumber(v)).collect(toList());
+    final List<JsonValue> values = array.stream().filter(v -> !isNumber(v)).toList();
 
     return values.isEmpty() || (values.size() == 1 && isInstant(values.get(0)));
   }

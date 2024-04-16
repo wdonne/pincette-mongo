@@ -9,5 +9,6 @@ module net.pincette.mongo {
   requires org.mongodb.driver.core;
   requires org.mongodb.driver.reactivestreams;
   requires com.schibsted.spt.data.jslt;
+
   exports net.pincette.mongo;
 }

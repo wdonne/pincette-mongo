@@ -1,7 +1,6 @@
 package net.pincette.mongo;
 
 import static java.lang.Integer.max;
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static javax.json.JsonValue.FALSE;
 import static javax.json.JsonValue.NULL;
@@ -291,7 +290,7 @@ class Arrays {
                             array,
                             mapper(array, "$$" + variable, in, features).stream()
                                 .map(i -> i.apply(json, vars))
-                                .collect(toList())))
+                                .toList()))
                 .orElse(NULL)
             : NULL;
   }
@@ -303,7 +302,7 @@ class Arrays {
       final Features features) {
     return values.stream()
         .map(v -> implementation(replaceVariables(expression, map(pair(variable, v))), features))
-        .collect(toList());
+        .toList();
   }
 
   static Implementation objectToArray(final JsonValue value, final Features features) {
@@ -455,8 +454,7 @@ class Arrays {
             .map(json -> json.getString(DIRECTION, null))
             .filter(dir -> dir.equals(ASC) || dir.equals(DESC))
             .orElse(ASC);
-    final List<String> paths =
-        object.map(json -> getStrings(json, PATHS).collect(toList())).orElse(null);
+    final List<String> paths = object.map(json -> getStrings(json, PATHS).toList()).orElse(null);
     final Implementation input = memberFunction(value, INPUT, features);
 
     return (json, vars) ->

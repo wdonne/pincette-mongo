@@ -52,7 +52,7 @@ import org.reactivestreams.FlowAdapters;
 /**
  * These are convenience functions to use JSON with the MongoDB API.
  *
- * @author Werner Donn\u00e9
+ * @author Werner Donné
  * @since 1.4
  */
 public class JsonClient {
@@ -781,7 +781,7 @@ public class JsonClient {
   }
 
   private static List<JsonObject> toJson(final List<BsonDocument> list) {
-    return list.stream().map(BsonUtil::fromBson).collect(toList());
+    return list.stream().map(BsonUtil::fromBson).toList();
   }
 
   private static Publisher<JsonObject> toJson(final Publisher<BsonDocument> pub) {
@@ -911,7 +911,7 @@ public class JsonClient {
       final JsonObject source, final JsonObject target) {
     return Patch.updateOperators(source, patch(source, target))
         .map(op -> new UpdateOneModel<Document>(eq(ID, fromJson(source.get(ID))), fromJson(op)))
-        .collect(toList());
+        .toList();
   }
 
   /**

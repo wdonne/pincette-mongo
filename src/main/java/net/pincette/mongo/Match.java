@@ -9,7 +9,6 @@ import static java.util.regex.Pattern.COMMENTS;
 import static java.util.regex.Pattern.DOTALL;
 import static java.util.regex.Pattern.MULTILINE;
 import static java.util.regex.Pattern.compile;
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.of;
 import static javax.json.JsonValue.FALSE;
 import static javax.json.JsonValue.NULL;
@@ -37,8 +36,8 @@ import static net.pincette.mongo.Cmp.compareNumbers;
 import static net.pincette.mongo.Cmp.compareStrings;
 import static net.pincette.mongo.Expression.function;
 import static net.pincette.mongo.Expression.isFalse;
-import static net.pincette.mongo.Util.key;
 import static net.pincette.mongo.Util.LOGGER;
+import static net.pincette.mongo.Util.key;
 import static net.pincette.mongo.Util.unwrapTrace;
 import static net.pincette.util.Collections.map;
 import static net.pincette.util.Collections.set;
@@ -83,7 +82,7 @@ import org.bson.conversions.Bson;
  * in the logger "net.pincette.mongo.expressions" at level <code>INFO</code>.
  *
  * @see Expression
- * @author Werner Donn\u00e9
+ * @author Werner Donné
  * @since 1.2
  */
 public class Match {
@@ -203,28 +202,18 @@ public class Match {
 
   private static Predicate<JsonObject> booleanExpression(
       final String key, final JsonValue value, final Features features) {
-    switch (key) {
-      case AND:
-        return and(value, features);
-      case EQ:
-        return booleanExpression(Relational::eq, value, features);
-      case GT:
-        return booleanExpression(Relational::gt, value, features);
-      case GTE:
-        return booleanExpression(Relational::gte, value, features);
-      case LT:
-        return booleanExpression(Relational::lt, value, features);
-      case LTE:
-        return booleanExpression(Relational::lte, value, features);
-      case NE:
-        return booleanExpression(Relational::ne, value, features);
-      case NOR:
-        return nor(value, features);
-      case OR:
-        return or(value, features);
-      default:
-        return null;
-    }
+    return switch (key) {
+      case AND -> and(value, features);
+      case EQ -> booleanExpression(Relational::eq, value, features);
+      case GT -> booleanExpression(Relational::gt, value, features);
+      case GTE -> booleanExpression(Relational::gte, value, features);
+      case LT -> booleanExpression(Relational::lt, value, features);
+      case LTE -> booleanExpression(Relational::lte, value, features);
+      case NE -> booleanExpression(Relational::ne, value, features);
+      case NOR -> nor(value, features);
+      case OR -> or(value, features);
+      default -> null;
+    };
   }
 
   private static Predicate<JsonObject> booleanExpression(
@@ -344,35 +333,24 @@ public class Match {
   }
 
   private static Predicate<JsonValue> gt(final JsonValue value) {
-    return v -> {
-      switch (value.getValueType()) {
-        case FALSE:
-          return v != null && v.equals(TRUE);
-        case NUMBER:
-          return v != null && isNumber(v) && compareNumbers(v, value) > 0;
-        case STRING:
-          return v != null && isString(v) && compareStrings(v, value) > 0;
-        default:
-          return false;
-      }
-    };
+    return v ->
+        switch (value.getValueType()) {
+          case FALSE -> v != null && v.equals(TRUE);
+          case NUMBER -> v != null && isNumber(v) && compareNumbers(v, value) > 0;
+          case STRING -> v != null && isString(v) && compareStrings(v, value) > 0;
+          default -> false;
+        };
   }
 
   private static Predicate<JsonValue> gte(final JsonValue value) {
-    return v -> {
-      switch (value.getValueType()) {
-        case FALSE:
-          return v != null && (v.equals(FALSE) || v.equals(TRUE));
-        case NUMBER:
-          return v != null && isNumber(v) && compareNumbers(v, value) >= 0;
-        case STRING:
-          return v != null && isString(v) && compareStrings(v, value) >= 0;
-        case TRUE:
-          return TRUE.equals(v);
-        default:
-          return false;
-      }
-    };
+    return v ->
+        switch (value.getValueType()) {
+          case FALSE -> v != null && (v.equals(FALSE) || v.equals(TRUE));
+          case NUMBER -> v != null && isNumber(v) && compareNumbers(v, value) >= 0;
+          case STRING -> v != null && isString(v) && compareStrings(v, value) >= 0;
+          case TRUE -> TRUE.equals(v);
+          default -> false;
+        };
   }
 
   private static boolean hasAllValues(final JsonArray v, final JsonArray array) {
@@ -396,7 +374,7 @@ public class Match {
   private static Predicate<JsonValue> in(final JsonValue value) {
     final List<Predicate<JsonValue>> values =
         (isArray(value) ? value.asJsonArray() : Collections.<JsonValue>emptyList())
-            .stream().map(v -> getRegex(v).orElse(v::equals)).collect(toList());
+            .stream().map(v -> getRegex(v).orElse(v::equals)).toList();
 
     return v -> v != null && values.stream().anyMatch(predicate -> predicate.test(v));
   }
@@ -418,7 +396,7 @@ public class Match {
         && keys.contains(REGEX)
         && keys.contains(OPTIONS)
         && Optional.of(expression.getString(OPTIONS))
-            .filter(options -> options.equals("") || options.matches("[imsx]+"))
+            .filter(options -> options.isEmpty() || options.matches("[imsx]+"))
             .isPresent();
   }
 
@@ -427,32 +405,20 @@ public class Match {
   }
 
   private static boolean isType(final JsonValue value, final String type) {
-    switch (type) {
-      case ARRAY:
-        return isArray(value);
-      case BOOL:
-        return value.equals(FALSE) || value.equals(TRUE);
-      case DATE:
-        return isDate(value);
-      case INT:
-        return isInt(value);
-      case LONG:
-        return isLong(value);
-      case DOUBLE:
-        return isDouble(value);
-      case DECIMAL:
-        return isNumber(value);
-      case NULL_TYPE:
-        return value.equals(NULL);
-      case OBJECT:
-        return isObject(value);
-      case TIMESTAMP:
-        return isInstant(value);
-      case STRING:
-        return isString(value);
-      default:
-        return false;
-    }
+    return switch (type) {
+      case ARRAY -> isArray(value);
+      case BOOL -> value.equals(FALSE) || value.equals(TRUE);
+      case DATE -> isDate(value);
+      case INT -> isInt(value);
+      case LONG -> isLong(value);
+      case DOUBLE -> isDouble(value);
+      case DECIMAL -> isNumber(value);
+      case NULL_TYPE -> value.equals(NULL);
+      case OBJECT -> isObject(value);
+      case TIMESTAMP -> isInstant(value);
+      case STRING -> isString(value);
+      default -> false;
+    };
   }
 
   private static boolean log(
@@ -482,35 +448,24 @@ public class Match {
   }
 
   private static Predicate<JsonValue> lt(final JsonValue value) {
-    return v -> {
-      switch (value.getValueType()) {
-        case NUMBER:
-          return v != null && isNumber(v) && compareNumbers(v, value) < 0;
-        case STRING:
-          return v != null && isString(v) && compareStrings(v, value) < 0;
-        case TRUE:
-          return v != null && v.equals(FALSE);
-        default:
-          return false;
-      }
-    };
+    return v ->
+        switch (value.getValueType()) {
+          case NUMBER -> v != null && isNumber(v) && compareNumbers(v, value) < 0;
+          case STRING -> v != null && isString(v) && compareStrings(v, value) < 0;
+          case TRUE -> v != null && v.equals(FALSE);
+          default -> false;
+        };
   }
 
   private static Predicate<JsonValue> lte(final JsonValue value) {
-    return v -> {
-      switch (value.getValueType()) {
-        case FALSE:
-          return FALSE.equals(v);
-        case NUMBER:
-          return v != null && isNumber(v) && compareNumbers(v, value) <= 0;
-        case STRING:
-          return v != null && isString(v) && compareStrings(v, value) <= 0;
-        case TRUE:
-          return v != null && (v.equals(FALSE) || v.equals(TRUE));
-        default:
-          return false;
-      }
-    };
+    return v ->
+        switch (value.getValueType()) {
+          case FALSE -> FALSE.equals(v);
+          case NUMBER -> v != null && isNumber(v) && compareNumbers(v, value) <= 0;
+          case STRING -> v != null && isString(v) && compareStrings(v, value) <= 0;
+          case TRUE -> v != null && (v.equals(FALSE) || v.equals(TRUE));
+          default -> false;
+        };
   }
 
   private static Optional<Long> mask(final JsonValue value) {
@@ -537,7 +492,7 @@ public class Match {
         .map(JsonUtil::asNumber)
         .map(JsonNumber::longValue)
         .filter(p -> p < 64)
-        .reduce(0L, (r, p) -> r | (1 << p), (r1, r2) -> r1);
+        .reduce(0L, (r, p) -> r | (1L << p), (r1, r2) -> r1);
   }
 
   private static boolean matches(final Pattern pattern, final JsonValue value) {
@@ -667,18 +622,13 @@ public class Match {
 
   private static Predicate<JsonObject> predicateCombiner(
       final String key, final JsonValue value, final Features features) {
-    switch (key) {
-      case AND:
-        return and(value, features);
-      case EXPR:
-        return expr(value, features);
-      case NOR:
-        return nor(value, features);
-      case OR:
-        return or(value, features);
-      default:
-        return json -> false;
-    }
+    return switch (key) {
+      case AND -> and(value, features);
+      case EXPR -> expr(value, features);
+      case NOR -> nor(value, features);
+      case OR -> or(value, features);
+      default -> json -> false;
+    };
   }
 
   private static Predicate<JsonObject> predicateField(
@@ -737,7 +687,7 @@ public class Match {
         .map(JsonUtil::asString)
         .map(JsonString::getString)
         .filter(SUPPORTED_TYPES::contains)
-        .collect(toList());
+        .toList();
   }
 
   private static Predicate<JsonValue> type(final JsonValue value) {

@@ -6,7 +6,6 @@ import static java.util.Optional.ofNullable;
 import static java.util.logging.Level.FINEST;
 import static java.util.logging.Level.INFO;
 import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static javax.json.JsonValue.FALSE;
 import static javax.json.JsonValue.NULL;
@@ -81,8 +80,8 @@ import org.bson.conversions.Bson;
  * fields <code>input</code> and <code>script</code>. The former is an expression that should
  * produce a JSON value. If it is absent <code>$$ROOT</code> will be assumed. The latter is a
  * reference to a JSLT script. If the value starts with "resource:" then it is treated as a resource
- * in the class path. Otherwise, it is a filename or a script. The result of the expression will be a
- * JSON value. If the expression is just a string, then it will ba handled as a script value.
+ * in the class path. Otherwise, it is a filename or a script. The result of the expression will be
+ * a JSON value. If the expression is just a string, then it will ba handled as a script value.
  *
  * <p>The <code>$sort</code> extension operator receives an object with the mandatory field <code>
  * input</code>, which should be an expression that yields an array. The optional field <code>
@@ -101,7 +100,7 @@ import org.bson.conversions.Bson;
  * <p>If you wrap an expression in the <code>$trace</code> operator then tracing will be done for it
  * in the logger "net.pincette.mongo.expressions" at level <code>INFO</code>.
  *
- * @author Werner Donn\u00e9
+ * @author Werner Donné
  * @since 1.2
  */
 public class Expression {
@@ -360,11 +359,7 @@ public class Expression {
       final Predicate<List<Implementation>> condition) {
     return ofNullable(implementations)
         .filter(condition)
-        .map(
-            fncs ->
-                fncs.stream()
-                    .map(f -> f == null ? null : f.apply(json, variables))
-                    .collect(toList()));
+        .map(fncs -> fncs.stream().map(f -> f == null ? null : f.apply(json, variables)).toList());
   }
 
   static Optional<List<JsonValue>> applyImplementationsNum(
@@ -587,7 +582,7 @@ public class Expression {
   private static Implementation implementation(
       final JsonArray expression, final Features features) {
     final List<Implementation> implementations =
-        expression.stream().map(expr -> implementation(expr, features)).collect(toList());
+        expression.stream().map(expr -> implementation(expr, features)).toList();
 
     return (json, vars) ->
         implementations.stream()
@@ -597,9 +592,7 @@ public class Expression {
 
   static List<Implementation> implementations(final JsonValue expression, final Features features) {
     return isArray(expression)
-        ? expression.asJsonArray().stream()
-            .map(expr -> implementation(expr, features))
-            .collect(toList())
+        ? expression.asJsonArray().stream().map(expr -> implementation(expr, features)).toList()
         : null;
   }
 
@@ -819,7 +812,7 @@ public class Expression {
 
     return (json, vars) ->
         applyImplementations(implementations, json, vars)
-            .map(values -> values.stream().filter(predicate).map(map).collect(toList()))
+            .map(values -> values.stream().filter(predicate).map(map).toList())
             .filter(list -> list.size() == implementations.size())
             .map(op)
             .orElse(NULL);
@@ -860,16 +853,12 @@ public class Expression {
    */
   public static JsonValue replaceVariables(
       final JsonValue expression, final Map<String, JsonValue> variables) {
-    switch (expression.getValueType()) {
-      case ARRAY:
-        return replaceVariables(expression.asJsonArray(), variables);
-      case OBJECT:
-        return replaceVariables(expression.asJsonObject(), variables);
-      case STRING:
-        return replaceVariables(asString(expression), variables);
-      default:
-        return expression;
-    }
+    return switch (expression.getValueType()) {
+      case ARRAY -> replaceVariables(expression.asJsonArray(), variables);
+      case OBJECT -> replaceVariables(expression.asJsonObject(), variables);
+      case STRING -> replaceVariables(asString(expression), variables);
+      default -> expression;
+    };
   }
 
   private static JsonValue replaceVariables(
@@ -920,14 +909,11 @@ public class Expression {
   }
 
   private static JsonValue unescapeKeys(final JsonValue value) {
-    switch (value.getValueType()) {
-      case ARRAY:
-        return unescapeKeys(value.asJsonArray());
-      case OBJECT:
-        return unescapeKeys(value.asJsonObject());
-      default:
-        return value;
-    }
+    return switch (value.getValueType()) {
+      case ARRAY -> unescapeKeys(value.asJsonArray());
+      case OBJECT -> unescapeKeys(value.asJsonObject());
+      default -> value;
+    };
   }
 
   private static JsonValue unescapeKeys(final JsonArray array) {

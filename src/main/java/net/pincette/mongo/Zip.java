@@ -4,7 +4,6 @@ import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Integer.max;
 import static java.lang.Math.min;
 import static java.util.Optional.ofNullable;
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.concat;
 import static java.util.stream.Stream.generate;
 import static javax.json.JsonValue.NULL;
@@ -28,7 +27,7 @@ import net.pincette.util.StreamUtil;
 /**
  * Implements the MongoDB <code>$zip</code> operator.
  *
- * @author Werner Donn\u00e9
+ * @author Werner Donné
  */
 class Zip {
   private static final String DEFAULTS = "defaults";
@@ -43,7 +42,7 @@ class Zip {
         .map(JsonValue::asJsonArray)
         .map(defs -> concat(defs.stream(), defaultsNull(max(end - defs.size(), 0))))
         .orElseGet(() -> defaultsNull(end))
-        .collect(toList());
+        .toList();
   }
 
   private static Stream<JsonValue> defaultsNull(final int size) {
