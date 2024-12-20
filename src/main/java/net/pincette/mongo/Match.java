@@ -45,6 +45,7 @@ import static net.pincette.util.Or.tryWith;
 import static net.pincette.util.Pair.pair;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -361,7 +362,7 @@ public class Match {
   }
 
   private static boolean hasAllValuesDirect(final JsonArray v, final JsonArray array) {
-    return v.containsAll(array);
+    return new HashSet<>(v).containsAll(array);
   }
 
   private static boolean hasAllValuesNested(final JsonArray v, final JsonArray nestedArray) {

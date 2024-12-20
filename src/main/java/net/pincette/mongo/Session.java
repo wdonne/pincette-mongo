@@ -14,7 +14,7 @@ import java.util.function.Function;
 /**
  * A <code>CompletionStage</code> wrapper around client sessions.
  *
- * @author Werner Donn\u00e9
+ * @author Werner Donné
  * @since 1.1
  */
 public class Session {

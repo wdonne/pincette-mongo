@@ -9,7 +9,7 @@ import javax.json.JsonValue;
  * query operator expression for which an implementation should be generated. An implementation
  * receives the field value of a JSON object.
  *
- * @author Werner Donn\u00e9
+ * @author Werner Donné
  * @since 2.0
  */
 public interface QueryOperator extends BiFunction<JsonValue, Features, Predicate<JsonValue>> {}

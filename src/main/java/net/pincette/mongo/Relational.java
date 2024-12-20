@@ -16,7 +16,7 @@ import javax.json.JsonValue;
 /**
  * Implements relational MongoDB operators.
  *
- * @author Werner Donn\u00e9
+ * @author Werner Donné
  */
 class Relational {
   private Relational() {}

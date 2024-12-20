@@ -9,7 +9,7 @@ import javax.json.JsonObject;
 /**
  * Extra features for the query and aggregation expression language.
  *
- * @author Werner Donn\u00e9
+ * @author Werner Donné
  * @since 1.5
  */
 public class Features {

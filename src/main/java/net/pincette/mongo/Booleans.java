@@ -30,7 +30,7 @@ class Booleans {
     return (json, vars) ->
         applyImplementations(implementations, json, vars)
             .map(values -> values.stream().reduce(initial, combiner, (r1, r2) -> r1))
-            .map(result -> result.booleanValue() ? TRUE : FALSE)
+            .map(result -> Boolean.TRUE.equals(result) ? TRUE : FALSE)
             .orElse(NULL);
   }
 

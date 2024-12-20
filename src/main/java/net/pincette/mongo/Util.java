@@ -28,7 +28,7 @@ import net.pincette.util.Pair;
 /**
  * Some utilities.
  *
- * @author Werner Donn\u00e9
+ * @author Werner Donné
  * @since 1.3.2
  */
 public class Util {

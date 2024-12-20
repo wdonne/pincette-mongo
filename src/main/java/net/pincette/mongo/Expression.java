@@ -813,7 +813,11 @@ public class Expression {
     return (json, vars) ->
         applyImplementations(implementations, json, vars)
             .map(values -> values.stream().filter(predicate).map(map).toList())
-            .filter(list -> list.size() == implementations.size())
+            .filter(
+                list -> {
+                  assert implementations != null;
+                  return list.size() == implementations.size();
+                })
             .map(op)
             .orElse(NULL);
   }
@@ -937,14 +941,19 @@ public class Expression {
   private static Optional<JsonValue> value(
       final JsonObject json, final String value, final Map<String, JsonValue> variables) {
     return tryWith(() -> value.equals(NOW) ? createValue(now().toString()) : null)
-        .or(() -> value.equals(TODAY) ? createValue(LocalDate.now().toString()) : null)
-        .or(() -> value.equals(ROOT) ? json : null)
-        .or(() -> value.startsWith("$$") ? value(variables, value.substring(2)) : null)
         .or(
-            () ->
-                value.startsWith("$")
-                    ? getValue(json, toJsonPointer(value.substring(1))).orElse(NULL)
-                    : null)
+            (Supplier<JsonValue>)
+                () -> value.equals(TODAY) ? createValue(LocalDate.now().toString()) : null)
+        .or((Supplier<JsonValue>) () -> value.equals(ROOT) ? json : null)
+        .or(
+            (Supplier<JsonValue>)
+                () -> value.startsWith("$$") ? value(variables, value.substring(2)) : null)
+        .or(
+            (Supplier<JsonValue>)
+                () ->
+                    value.startsWith("$")
+                        ? getValue(json, toJsonPointer(value.substring(1))).orElse(NULL)
+                        : null)
         .get();
   }
 

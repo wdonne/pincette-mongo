@@ -60,34 +60,21 @@ public class BsonUtil {
   private BsonUtil() {}
 
   public static JsonValue fromBson(final BsonValue bson) {
-    switch (bson.getBsonType()) {
-      case ARRAY:
-        return fromBson(bson.asArray());
-      case BOOLEAN:
-        return bson.asBoolean().getValue() ? TRUE : FALSE;
-      case DATE_TIME:
-        return fromBson(bson.asDateTime());
-      case DOCUMENT:
-        return fromBson(bson.asDocument());
-      case DOUBLE:
-        return fromBson(bson.asDouble());
-      case INT32:
-        return fromBson(bson.asInt32());
-      case INT64:
-        return fromBson(bson.asInt64());
-      case NULL:
-        return NULL;
-      case OBJECT_ID:
-        return fromBson(bson.asObjectId());
-      case REGULAR_EXPRESSION:
-        return fromBson(bson.asRegularExpression());
-      case STRING:
-        return fromBson(bson.asString());
-      case TIMESTAMP:
-        return fromBson(bson.asTimestamp());
-      default:
-        return null;
-    }
+    return switch (bson.getBsonType()) {
+      case ARRAY -> fromBson(bson.asArray());
+      case BOOLEAN -> bson.asBoolean().getValue() ? TRUE : FALSE;
+      case DATE_TIME -> fromBson(bson.asDateTime());
+      case DOCUMENT -> fromBson(bson.asDocument());
+      case DOUBLE -> fromBson(bson.asDouble());
+      case INT32 -> fromBson(bson.asInt32());
+      case INT64 -> fromBson(bson.asInt64());
+      case NULL -> NULL;
+      case OBJECT_ID -> fromBson(bson.asObjectId());
+      case REGULAR_EXPRESSION -> fromBson(bson.asRegularExpression());
+      case STRING -> fromBson(bson.asString());
+      case TIMESTAMP -> fromBson(bson.asTimestamp());
+      default -> null;
+    };
   }
 
   public static JsonArray fromBson(final BsonArray array) {
@@ -146,24 +133,15 @@ public class BsonUtil {
   }
 
   private static BsonValue fromJson(final JsonValue json, final boolean asTimestamp) {
-    switch (json.getValueType()) {
-      case ARRAY:
-        return fromJson(json.asJsonArray(), asTimestamp);
-      case FALSE:
-        return BsonBoolean.FALSE;
-      case NULL:
-        return BsonNull.VALUE;
-      case NUMBER:
-        return fromJson(asNumber(json));
-      case OBJECT:
-        return fromJson(json.asJsonObject(), asTimestamp);
-      case STRING:
-        return asTimestamp ? fromJsonNew(asString(json)) : fromJson(asString(json));
-      case TRUE:
-        return BsonBoolean.TRUE;
-      default:
-        return null;
-    }
+    return switch (json.getValueType()) {
+      case ARRAY -> fromJson(json.asJsonArray(), asTimestamp);
+      case FALSE -> BsonBoolean.FALSE;
+      case NULL -> BsonNull.VALUE;
+      case NUMBER -> fromJson(asNumber(json));
+      case OBJECT -> fromJson(json.asJsonObject(), asTimestamp);
+      case STRING -> asTimestamp ? fromJsonNew(asString(json)) : fromJson(asString(json));
+      case TRUE -> BsonBoolean.TRUE;
+    };
   }
 
   public static BsonArray fromJson(final JsonArray array) {

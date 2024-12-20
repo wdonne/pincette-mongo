@@ -18,7 +18,7 @@ import javax.json.JsonValue;
 /**
  * Implements the MongoDB <code>$cmp</code> operator.
  *
- * @author Werner Donn\u00e9
+ * @author Werner Donné
  */
 class Cmp {
   private Cmp() {}
@@ -47,20 +47,14 @@ class Cmp {
       return 1;
     }
 
-    switch (v1.getValueType()) {
-      case FALSE:
-        return v2.equals(FALSE) ? 0 : -1;
-      case NULL:
-        return -1;
-      case NUMBER:
-        return compareNumbers(v1, v2);
-      case STRING:
-        return compareStrings(v1, v2);
-      case TRUE:
-        return v2.equals(TRUE) ? 0 : 1;
-      default:
-        return 0;
-    }
+    return switch (v1.getValueType()) {
+      case FALSE -> v2.equals(FALSE) ? 0 : -1;
+      case NULL -> -1;
+      case NUMBER -> compareNumbers(v1, v2);
+      case STRING -> compareStrings(v1, v2);
+      case TRUE -> v2.equals(TRUE) ? 0 : 1;
+      default -> 0;
+    };
   }
 
   static int compareNumbers(final JsonValue v1, final JsonValue v2) {

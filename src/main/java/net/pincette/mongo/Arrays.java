@@ -250,7 +250,7 @@ class Arrays {
     return Optional.of(value)
         .filter(JsonUtil::isObject)
         .map(JsonValue::asJsonObject)
-        .filter(json -> json.keySet().size() == 2 && json.containsKey("k") && json.containsKey("v"))
+        .filter(json -> json.size() == 2 && json.containsKey("k") && json.containsKey("v"))
         .isPresent();
   }
 

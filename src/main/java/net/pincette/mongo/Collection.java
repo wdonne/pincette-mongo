@@ -40,7 +40,7 @@ import org.reactivestreams.Publisher;
 /**
  * These are <code>CompletionStage</code> wrappers around the MongoDB reactive streams client.
  *
- * @author Werner Donn\u00e9
+ * @author Werner Donné
  * @since 1.0
  */
 public class Collection {

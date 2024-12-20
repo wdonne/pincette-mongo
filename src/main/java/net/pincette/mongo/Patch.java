@@ -34,7 +34,7 @@ import org.bson.conversions.Bson;
 /**
  * Support for MongoDB updates.
  *
- * @author Werner Donn\u00e9
+ * @author Werner Donné
  * @since 2.1
  */
 public class Patch {
@@ -99,20 +99,14 @@ public class Patch {
   }
 
   private static Stream<JsonObject> operation(final JsonObject original, final JsonObject op) {
-    switch (fromOperationName(op.getString(OP))) {
-      case ADD:
-        return of(add(original, op));
-      case COPY:
-        return of(copy(original, op));
-      case MOVE:
-        return move(original, op);
-      case REMOVE:
-        return of(remove(original, op, PATH));
-      case REPLACE:
-        return of(replace(op));
-      default:
-        return empty();
-    }
+    return switch (fromOperationName(op.getString(OP))) {
+      case ADD -> of(add(original, op));
+      case COPY -> of(copy(original, op));
+      case MOVE -> move(original, op);
+      case REMOVE -> of(remove(original, op, PATH));
+      case REPLACE -> of(replace(op));
+      default -> empty();
+    };
   }
 
   private static JsonObject remove(

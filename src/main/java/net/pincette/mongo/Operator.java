@@ -8,7 +8,7 @@ import javax.json.JsonValue;
  * operator expression for which an implementation should be generated. An implementation receives a
  * JSON object and a variable map. The names in that map will be stripped of their "$$" prefix.
  *
- * @author Werner Donn\u00e9
+ * @author Werner Donné
  * @since 2.0
  */
 public interface Operator extends BiFunction<JsonValue, Features, Implementation> {}
