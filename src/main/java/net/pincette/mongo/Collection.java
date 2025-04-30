@@ -1,7 +1,10 @@
 package net.pincette.mongo;
 
+import static java.util.Optional.ofNullable;
+import static java.util.concurrent.CompletableFuture.completedStage;
 import static net.pincette.rs.Util.asListAsync;
 import static net.pincette.rs.Util.asValueAsync;
+import static net.pincette.util.Util.tryToGet;
 import static org.reactivestreams.FlowAdapters.toFlowPublisher;
 
 import com.mongodb.bulk.BulkWriteResult;
@@ -30,6 +33,7 @@ import com.mongodb.reactivestreams.client.MongoCollection;
 import com.mongodb.reactivestreams.client.MongoDatabase;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
@@ -275,20 +279,30 @@ public class Collection {
    * @param op the collection operation.
    * @param <T> the result type.
    * @param <D> the document type.
-   * @return The completion stage with the result.
+   * @return The completion stage with the result, which can be <code>null</code>.
    * @since 2.1
    */
   public static <T, D> CompletionStage<T> exec(
       final MongoCollection<D> collection, final Function<MongoCollection<D>, Publisher<T>> op) {
-    return asValueAsync(toFlowPublisher(op.apply(collection)));
+    return tryToGet(
+            () ->
+                ofNullable(op.apply(collection))
+                    .map(p -> asValueAsync(toFlowPublisher(p)))
+                    .orElseGet(() -> completedStage(null)),
+            CompletableFuture::<T>failedStage)
+        .orElseGet(() -> completedStage(null));
   }
 
   private static CompletionStage<MongoCollection<Document>> execCreate(
       final MongoDatabase database,
       final String name,
       final Function<MongoDatabase, Publisher<Void>> op) {
-    return asValueAsync(toFlowPublisher(op.apply(database)))
-        .thenApply(r -> database.getCollection(name));
+    return tryToGet(
+            () ->
+                asValueAsync(toFlowPublisher(op.apply(database)))
+                    .thenApply(r -> database.getCollection(name)),
+            CompletableFuture::<MongoCollection<Document>>failedStage)
+        .orElseGet(() -> completedStage(null));
   }
 
   /**
@@ -303,7 +317,11 @@ public class Collection {
    */
   public static <T, D> CompletionStage<List<T>> execList(
       final MongoCollection<D> collection, final Function<MongoCollection<D>, Publisher<T>> op) {
-    return asListAsync(toFlowPublisher(op.apply(collection)));
+    return tryToGet(
+            () -> asListAsync(toFlowPublisher(op.apply(collection))),
+            CompletableFuture::<List<T>>failedStage)
+        .orElseGet(() -> completedStage(null))
+        .thenApply(v -> v);
   }
 
   public static <D> CompletionStage<List<D>> find(
