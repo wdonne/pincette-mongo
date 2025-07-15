@@ -13,11 +13,31 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class TestExpression {
+  private static void jq(final String script) {
+    script(script, "$jq");
+  }
+
   private static void jslt(final String script) {
+    script(script, "$jslt");
+  }
+
+  private static void script(final String script, final String operator) {
     assertEquals(
         o(f("f", v("v")), f("test", v("test"))),
-        function(o(f("$jslt", o(f("input", o(f("f", v("v")))), f("script", v(script))))))
+        function(o(f(operator, o(f("input", o(f("f", v("v")))), f("script", v(script))))))
             .apply(o()));
+  }
+
+  @Test
+  @DisplayName("$jq 1")
+  void jq1() {
+    jq("resource:/test.jq");
+  }
+
+  @Test
+  @DisplayName("$jq 2")
+  void jq2() {
+    jq(". + {test: \"test\"}");
   }
 
   @Test

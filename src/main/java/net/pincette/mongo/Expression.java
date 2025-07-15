@@ -9,8 +9,6 @@ import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toMap;
 import static javax.json.JsonValue.FALSE;
 import static javax.json.JsonValue.NULL;
-import static net.pincette.json.Jslt.transformerValue;
-import static net.pincette.json.Jslt.tryReader;
 import static net.pincette.json.JsonUtil.asInt;
 import static net.pincette.json.JsonUtil.asNumber;
 import static net.pincette.json.JsonUtil.asString;
@@ -59,6 +57,7 @@ import javax.json.JsonObject;
 import javax.json.JsonString;
 import javax.json.JsonStructure;
 import javax.json.JsonValue;
+import net.pincette.json.Jq;
 import net.pincette.json.Jslt;
 import net.pincette.json.JsonUtil;
 import net.pincette.util.Pair;
@@ -76,17 +75,24 @@ import org.bson.conversions.Bson;
  * <p>The <code>$unescape</code> extension operator converts key names that start with "#$" to "$".
  * This way an expression can be escaped from implementation generation.
  *
+ * <p>The expression of the <code>$jq</code> extension operator should be an object with the fields
+ * <code>input</code> and <code>script</code>. The former is an expression that should produce a
+ * JSON value. If it is absent <code>$$ROOT</code> will be assumed. The latter is a reference to a
+ * JQ script. If the value starts with "resource:" then it is treated as a resource in the class
+ * path. Otherwise, it is a filename or a script. The result of the expression will be a JSON value.
+ * If the expression is just a string, then it will be handled as a script value.
+ *
  * <p>The expression of the <code>$jslt</code> extension operator should be an object with the
  * fields <code>input</code> and <code>script</code>. The former is an expression that should
  * produce a JSON value. If it is absent <code>$$ROOT</code> will be assumed. The latter is a
  * reference to a JSLT script. If the value starts with "resource:" then it is treated as a resource
  * in the class path. Otherwise, it is a filename or a script. The result of the expression will be
- * a JSON value. If the expression is just a string, then it will ba handled as a script value.
+ * a JSON value. If the expression is just a string, then it will be handled as a script value.
  *
  * <p>The <code>$sort</code> extension operator receives an object with the mandatory field <code>
  * input</code>, which should be an expression that yields an array. The optional field <code>
  * direction</code> can have the values "asc" or "desc", the former being the default. The optional
- * field <code>paths</code> is a list of field paths. When it is present only object values in the
+ * field <code>paths</code> is a list of field paths. When it is present, only object values in the
  * array are considered. They will be sorted hierarchically with the values extracted with the
  * paths.
  *
@@ -144,6 +150,7 @@ public class Expression {
   private static final String INDEX_OF_CP = "$indexOfCP";
   private static final String INPUT = "input";
   private static final String IS_ARRAY = "$isArray";
+  private static final String JQ = "$jq";
   private static final String JSLT = "$jslt";
   private static final String JSON_TO_STRING = "$jsonToString";
   private static final String LAST = "$last";
@@ -336,6 +343,7 @@ public class Expression {
           TYPES,
           map(
               pair(CMP, Cmp::cmp),
+              pair(JQ, Expression::jq),
               pair(JSLT, Expression::jslt),
               pair(LET, Expression::let),
               pair(LITERAL, (v, f) -> literal(v)),
@@ -606,37 +614,31 @@ public class Expression {
     return !(value instanceof JsonStructure);
   }
 
-  private static Implementation jslt(final JsonValue value, final Features features) {
-    final Implementation input = jsltInput(value, features);
-    final UnaryOperator<JsonValue> script = jsltScript(value, features);
-
-    return (json, vars) ->
-        input != null && script != null
-            ? Optional.of(input.apply(json, vars))
-                .filter(JsonUtil::isObject)
-                .map(JsonValue::asJsonObject)
-                .map(script)
-                .map(JsonUtil::createValue)
-                .orElse(NULL)
-            : NULL;
+  private static Implementation jq(final JsonValue value, final Features features) {
+    return script(value, jqScript(value, features), features);
   }
 
-  private static Implementation jsltInput(final JsonValue value, final Features features) {
-    return tryWith(() -> memberFunction(value, INPUT, features))
-        .or(() -> implementation(createValue(ROOT), features))
-        .get()
+  private static UnaryOperator<JsonValue> jqScript(final JsonValue value, final Features features) {
+    return scriptValue(value)
+        .map(
+            s ->
+                Jq.transformerValue(
+                    new Jq.Context(Jq.tryReader(s))
+                        .withModuleLoader(features != null ? features.jqModuleLoader : null)))
         .orElse(null);
+  }
+
+  private static Implementation jslt(final JsonValue value, final Features features) {
+    return script(value, jsltScript(value, features), features);
   }
 
   private static UnaryOperator<JsonValue> jsltScript(
       final JsonValue value, final Features features) {
-    return tryWith(() -> member(value, SCRIPT, v -> stringValue(v).orElse(null)).orElse(null))
-        .or(() -> stringValue(value).orElse(null))
-        .get()
+    return scriptValue(value)
         .map(
             s ->
-                transformerValue(
-                    new Jslt.Context(tryReader(s))
+                Jslt.transformerValue(
+                    new Jslt.Context(Jslt.tryReader(s))
                         .withResolver(features != null ? features.jsltResolver : null)
                         .withFunctions(features != null ? features.customJsltFunctions : null)))
         .orElse(null);
@@ -677,7 +679,7 @@ public class Expression {
   }
 
   /**
-   * If you set the log level to FINEST you will get a trace.
+   * If you set the log level to FINEST, you will get a trace.
    *
    * @return The logger with the name "net.pincette.mongo.expression".
    * @since 1.3
@@ -886,6 +888,34 @@ public class Expression {
             (b, e) -> b.add(e.getKey(), replaceVariables(e.getValue(), variables)),
             (b1, b2) -> b1)
         .build();
+  }
+
+  private static Implementation script(
+      final JsonValue value, final UnaryOperator<JsonValue> op, final Features features) {
+    final Implementation input = scriptInput(value, features);
+
+    return (json, vars) ->
+        input != null && op != null
+            ? Optional.of(input.apply(json, vars))
+                .filter(JsonUtil::isObject)
+                .map(JsonValue::asJsonObject)
+                .map(op)
+                .map(JsonUtil::createValue)
+                .orElse(NULL)
+            : NULL;
+  }
+
+  private static Implementation scriptInput(final JsonValue value, final Features features) {
+    return tryWith(() -> memberFunction(value, INPUT, features))
+        .or(() -> implementation(createValue(ROOT), features))
+        .get()
+        .orElse(null);
+  }
+
+  private static Optional<String> scriptValue(final JsonValue value) {
+    return tryWith(() -> member(value, SCRIPT, v -> stringValue(v).orElse(null)).orElse(null))
+        .or(() -> stringValue(value).orElse(null))
+        .get();
   }
 
   static Implementation stringsOperator(

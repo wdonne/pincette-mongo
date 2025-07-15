@@ -5,6 +5,8 @@ import com.schibsted.spt.data.jslt.ResourceResolver;
 import java.util.Map;
 import java.util.function.BiFunction;
 import javax.json.JsonObject;
+import net.thisptr.jackson.jq.Scope;
+import net.thisptr.jackson.jq.module.ModuleLoader;
 
 /**
  * Extra features for the query and aggregation expression language.
@@ -16,21 +18,24 @@ public class Features {
   public final java.util.Collection<Function> customJsltFunctions;
   public final Map<String, Operator> expressionExtensions;
   public final BiFunction<JsonObject, String, JsonObject> expressionResolver;
+  public final java.util.function.Function<Scope, ModuleLoader> jqModuleLoader;
   public final ResourceResolver jsltResolver;
   public final Map<String, QueryOperator> matchExtensions;
 
   public Features() {
-    this(null, null, null, null, null);
+    this(null, null, null, null, null, null);
   }
 
   private Features(
       final java.util.Collection<Function> customJsltFunctions,
       final Map<String, Operator> expressionExtensions,
+      final java.util.function.Function<Scope, ModuleLoader> jqModuleLoader,
       final ResourceResolver jsltResolver,
       final Map<String, QueryOperator> matchExtensions,
       final BiFunction<JsonObject, String, JsonObject> expressionResolver) {
     this.customJsltFunctions = customJsltFunctions;
     this.expressionExtensions = expressionExtensions;
+    this.jqModuleLoader = jqModuleLoader;
     this.jsltResolver = jsltResolver;
     this.matchExtensions = matchExtensions;
     this.expressionResolver = expressionResolver;
@@ -47,6 +52,7 @@ public class Features {
     return new Features(
         customJsltFunctions,
         expressionExtensions,
+        jqModuleLoader,
         jsltResolver,
         matchExtensions,
         expressionResolver);
@@ -62,6 +68,7 @@ public class Features {
     return new Features(
         customJsltFunctions,
         expressionExtensions,
+        jqModuleLoader,
         jsltResolver,
         matchExtensions,
         expressionResolver);
@@ -84,6 +91,24 @@ public class Features {
     return new Features(
         customJsltFunctions,
         expressionExtensions,
+        jqModuleLoader,
+        jsltResolver,
+        matchExtensions,
+        expressionResolver);
+  }
+
+  /**
+   * The import module loader for the JQ compiler.
+   *
+   * @param jqModuleLoader an implementation that loads imported JQ scripts.
+   * @return A new features object.
+   */
+  public Features withJqModuleLoader(
+      final java.util.function.Function<Scope, ModuleLoader> jqModuleLoader) {
+    return new Features(
+        customJsltFunctions,
+        expressionExtensions,
+        jqModuleLoader,
         jsltResolver,
         matchExtensions,
         expressionResolver);
@@ -99,6 +124,7 @@ public class Features {
     return new Features(
         customJsltFunctions,
         expressionExtensions,
+        jqModuleLoader,
         jsltResolver,
         matchExtensions,
         expressionResolver);
@@ -114,6 +140,7 @@ public class Features {
     return new Features(
         customJsltFunctions,
         expressionExtensions,
+        jqModuleLoader,
         jsltResolver,
         matchExtensions,
         expressionResolver);
