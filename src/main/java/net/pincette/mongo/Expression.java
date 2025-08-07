@@ -11,7 +11,6 @@ import static javax.json.JsonValue.FALSE;
 import static javax.json.JsonValue.NULL;
 import static net.pincette.json.JsonUtil.asInt;
 import static net.pincette.json.JsonUtil.asNumber;
-import static net.pincette.json.JsonUtil.asString;
 import static net.pincette.json.JsonUtil.copy;
 import static net.pincette.json.JsonUtil.createArrayBuilder;
 import static net.pincette.json.JsonUtil.createObjectBuilder;
@@ -106,6 +105,11 @@ import org.bson.conversions.Bson;
  * <p>If you wrap an expression in the <code>$trace</code> operator then tracing will be done for it
  * in the logger "net.pincette.mongo.expressions" at level <code>INFO</code>.
  *
+ * <p>The extension operators <code>$fromEpochMillis</code>, <code>$fromEpochNanos</code>, <code>
+ * $fromEpochSeconds</code>, <code>$toEpochMillis</code>, <code>$toEpochNanos</code>, <code>
+ * $toEpochSeconds</code>, <code>$toDate</code>, <code>$toDay</code>, <code>$toMonth</code> and
+ * <code>$toYear</code> work with ISO8601 timestamps.
+ *
  * @author Werner Donné
  * @since 1.2
  */
@@ -141,6 +145,9 @@ public class Expression {
   private static final String FILTER = "$filter";
   private static final String FIRST = "$first";
   private static final String FLOOR = "$floor";
+  private static final String FROM_EPOCH_MILLIS = "$fromEpochMillis";
+  private static final String FROM_EPOCH_NANOS = "$fromEpochNanos";
+  private static final String FROM_EPOCH_SECONDS = "$fromEpochSeconds";
   private static final String GT = "$gt";
   private static final String GTE = "$gte";
   private static final String IF_NULL = "$ifNull";
@@ -204,13 +211,20 @@ public class Expression {
   private static final String SWITCH = "$switch";
   private static final String TAN = "$tan";
   private static final String TO_BOOL = "$toBool";
+  private static final String TO_DATE = "$toDate";
+  private static final String TO_DAY = "$toDay";
   private static final String TO_DECIMAL = "$toDecimal";
   private static final String TO_DOUBLE = "$toDouble";
+  private static final String TO_EPOCH_MILLIS = "$toEpochMillis";
+  private static final String TO_EPOCH_NANOS = "$toEpochNanos";
+  private static final String TO_EPOCH_SECONDS = "$toEpochSeconds";
   private static final String TO_INT = "$toInt";
   private static final String TO_LONG = "$toLong";
   private static final String TO_LOWER = "$toLower";
+  private static final String TO_MONTH = "$toMonth";
   private static final String TO_STRING = "$toString";
   private static final String TO_UPPER = "$toUpper";
+  private static final String TO_YEAR = "$toYear";
   private static final String TODAY = "$$TODAY";
   private static final String TRIM = "$trim";
   private static final String TRUNC = "$trunc";
@@ -265,6 +279,18 @@ public class Expression {
           pair(COND, Conditional::cond),
           pair(IF_NULL, Conditional::ifNull),
           pair(SWITCH, Conditional::switchFunction));
+  private static final Map<String, Operator> ISO8601 =
+      map(
+          pair(FROM_EPOCH_MILLIS, Iso8601::fromEpochMillis),
+          pair(FROM_EPOCH_NANOS, Iso8601::fromEpochNanos),
+          pair(FROM_EPOCH_SECONDS, Iso8601::fromEpochSeconds),
+          pair(TO_DATE, Iso8601::toDate),
+          pair(TO_DAY, Iso8601::toDay),
+          pair(TO_EPOCH_MILLIS, Iso8601::toEpochMillis),
+          pair(TO_EPOCH_NANOS, Iso8601::toEpochNanos),
+          pair(TO_EPOCH_SECONDS, Iso8601::toEpochSeconds),
+          pair(TO_MONTH, Iso8601::toMonth),
+          pair(TO_YEAR, Iso8601::toYear));
   private static final Map<String, Operator> RELATIONAL =
       map(
           pair(EQ, asFunction(Relational::eq)),
@@ -336,6 +362,7 @@ public class Expression {
           ARRAYS,
           BOOLEANS,
           CONDITIONAL,
+          ISO8601,
           RELATIONAL,
           SETS,
           STRINGS,
@@ -405,6 +432,94 @@ public class Expression {
         JsonUtil::isArray,
         JsonValue::asJsonArray,
         features);
+  }
+
+  /**
+   * Returns a result when it is an array.
+   *
+   * @param implementation the original implementation.
+   * @return The optional implementation.
+   * @since 4.3.0
+   */
+  public static ImplementationOptional asArray(final Implementation implementation) {
+    return implementationOptional(implementation, JsonUtil::isArray);
+  }
+
+  /**
+   * Returns a result when it is a boolean.
+   *
+   * @param implementation the original implementation.
+   * @return The optional implementation.
+   * @since 4.3.0
+   */
+  public static ImplementationOptional asBoolean(final Implementation implementation) {
+    return implementationOptional(implementation, JsonUtil::isBoolean);
+  }
+
+  /**
+   * Returns a result when it is a double number.
+   *
+   * @param implementation the original implementation.
+   * @return The optional implementation.
+   * @since 4.3.0
+   */
+  public static ImplementationOptional asDouble(final Implementation implementation) {
+    return implementationOptional(implementation, JsonUtil::isDouble);
+  }
+
+  /**
+   * Returns a result when it is an UTC instant.
+   *
+   * @param implementation the original implementation.
+   * @return The optional implementation.
+   * @since 4.3.0
+   */
+  public static ImplementationOptional asInstant(final Implementation implementation) {
+    return implementationOptional(implementation, JsonUtil::isInstant);
+  }
+
+  /**
+   * Returns a result when it is a long number.
+   *
+   * @param implementation the original implementation.
+   * @return The optional implementation.
+   * @since 4.3.0
+   */
+  public static ImplementationOptional asLong(final Implementation implementation) {
+    return implementationOptional(implementation, JsonUtil::isLong);
+  }
+
+  /**
+   * Returns a result when it is a JSON number.
+   *
+   * @param implementation the original implementation.
+   * @return The optional implementation.
+   * @since 4.3.0
+   */
+  public static ImplementationOptional asNumeric(final Implementation implementation) {
+    return implementationOptional(implementation, JsonUtil::isNumber);
+  }
+
+  /**
+   * Returns a result when it is an object.
+   *
+   * @param implementation the original implementation.
+   * @return The optional implementation.
+   * @since 4.3.0
+   */
+  public static ImplementationOptional asObject(final Implementation implementation) {
+    return implementationOptional(implementation, JsonUtil::isObject);
+  }
+
+  /**
+   * Returns a result when it is a string.
+   *
+   * @param implementation the original implementation.
+   * @return The optional implementation.
+   * @since 4.3.0
+   */
+  public static ImplementationOptional asString(final Implementation implementation) {
+    return implementationOptional(implementation, JsonUtil::isString);
   }
 
   static Implementation bigMath(
@@ -530,7 +645,7 @@ public class Expression {
   }
 
   static String getString(final List<JsonValue> values, final int index) {
-    return asString(values.get(index)).getString();
+    return JsonUtil.asString(values.get(index)).getString();
   }
 
   private static Optional<JsonValue> getVariable(
@@ -699,10 +814,12 @@ public class Expression {
       final Function<JsonNumber, T> toValue,
       final UnaryOperator<T> op,
       final Features features) {
-    final Implementation implementation = implementation(value, features);
+    final ImplementationOptional implementation = asNumeric(implementation(value, features));
 
     return (json, vars) ->
-        numeric(implementation, json, vars)
+        implementation
+            .apply(json, vars)
+            .map(JsonUtil::asNumber)
             .map(toValue)
             .map(op)
             .map(JsonUtil::createValue)
@@ -824,14 +941,18 @@ public class Expression {
             .orElse(NULL);
   }
 
-  private static Optional<JsonNumber> numeric(
-      final Implementation implementation,
-      final JsonObject json,
-      final Map<String, JsonValue> variables) {
-    return ofNullable(implementation)
-        .map(f -> f.apply(json, variables))
-        .filter(JsonUtil::isNumber)
-        .map(JsonUtil::asNumber);
+  /**
+   * Adds a condition to the result of an implementation.
+   *
+   * @param implementation the original implementation.
+   * @param condition the condition.
+   * @return The optional implementation.
+   * @since 4.3.0
+   */
+  public static ImplementationOptional implementationOptional(
+      final Implementation implementation, final Predicate<JsonValue> condition) {
+    return (json, variables) ->
+        Optional.of(implementation.apply(json, variables)).filter(condition);
   }
 
   private static Implementation recursiveImplementation(
@@ -862,7 +983,7 @@ public class Expression {
     return switch (expression.getValueType()) {
       case ARRAY -> replaceVariables(expression.asJsonArray(), variables);
       case OBJECT -> replaceVariables(expression.asJsonObject(), variables);
-      case STRING -> replaceVariables(asString(expression), variables);
+      case STRING -> replaceVariables(JsonUtil.asString(expression), variables);
       default -> expression;
     };
   }
@@ -920,7 +1041,8 @@ public class Expression {
 
   static Implementation stringsOperator(
       final JsonValue value, final Function<List<String>, JsonValue> op, final Features features) {
-    return multipleOperator(value, op, JsonUtil::isString, v -> asString(v).getString(), features);
+    return multipleOperator(
+        value, op, JsonUtil::isString, v -> JsonUtil.asString(v).getString(), features);
   }
 
   private static Map<String, JsonValue> stripDollars(final Map<String, JsonValue> variables) {
@@ -1037,9 +1159,6 @@ public class Expression {
 
   private static Implementation wrapLogging(
       final Implementation implementation, final JsonValue expression, final Level level) {
-    return (json, vars) ->
-        Optional.of(implementation.apply(json, vars))
-            .map(result -> log(expression, json, vars, result, level))
-            .orElse(null);
+    return (json, vars) -> log(expression, json, vars, implementation.apply(json, vars), level);
   }
 }

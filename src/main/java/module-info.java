@@ -9,7 +9,7 @@ module net.pincette.mongo {
   requires org.mongodb.driver.core;
   requires org.mongodb.driver.reactivestreams;
   requires com.schibsted.spt.data.jslt;
-  requires jackson.jq;
+  requires net.thisptr.jackson.jq;
 
   exports net.pincette.mongo;
 }

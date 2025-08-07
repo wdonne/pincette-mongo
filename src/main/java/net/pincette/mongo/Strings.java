@@ -249,11 +249,12 @@ class Strings {
 
   private static Implementation string(
       final JsonValue value, final Function<String, JsonValue> op, final Features features) {
-    final Implementation implementation = implementation(value, features);
+    final ImplementationOptional implementation =
+        Expression.asString(implementation(value, features));
 
     return (json, vars) ->
-        Optional.of(implementation.apply(json, vars))
-            .filter(JsonUtil::isString)
+        implementation
+            .apply(json, vars)
             .map(JsonUtil::asString)
             .map(JsonString::getString)
             .map(op)
