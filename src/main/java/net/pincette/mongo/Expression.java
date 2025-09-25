@@ -428,7 +428,7 @@ public class Expression {
       final Features features) {
     return multipleOperator(
         value,
-        arrays -> arrays.size() == 2 ? op.apply(arrays.get(0), arrays.get(1)) : null,
+        arrays -> arrays.size() == 2 ? op.apply(arrays.getFirst(), arrays.get(1)) : null,
         JsonUtil::isArray,
         JsonValue::asJsonArray,
         features);
@@ -853,7 +853,7 @@ public class Expression {
             .map(
                 values ->
                     op.apply(
-                        toValue.apply(asNumber(values.get(0))),
+                        toValue.apply(asNumber(values.getFirst())),
                         values.size() == 2 ? toValue.apply(asNumber(values.get(1))) : null))
             .map(JsonUtil::createValue)
             .orElse(NULL);

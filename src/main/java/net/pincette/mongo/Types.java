@@ -62,16 +62,16 @@ class Types {
 
     return (json, vars) ->
         applyImplementations(
-                implementations, json, vars, fncs -> fncs.get(0) != null && fncs.get(1) != null)
+                implementations, json, vars, fncs -> fncs.getFirst() != null && fncs.get(1) != null)
             .filter(
                 values ->
-                    isScalar(values.get(0))
+                    isScalar(values.getFirst())
                         && (isString(values.get(1)) || isNumber(values.get(1)))
                         && isScalar(values.get(2))
                         && isScalar(values.get(3)))
             .map(
                 values ->
-                    tryToGetSilent(() -> op(typeString(values.get(1))).apply(values.get(0)))
+                    tryToGetSilent(() -> op(typeString(values.get(1))).apply(values.getFirst()))
                         .map(result -> result.equals(NULL) ? values.get(3) : result)
                         .orElseGet(() -> values.get(2)))
             .orElse(NULL);

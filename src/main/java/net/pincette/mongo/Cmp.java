@@ -28,7 +28,7 @@ class Cmp {
 
     return (json, vars) ->
         applyImplementationsNum(implementations, json, vars, 2)
-            .map(values -> cmp(values.get(0), values.get(1)))
+            .map(values -> cmp(values.getFirst(), values.get(1)))
             .orElse(NULL);
   }
 

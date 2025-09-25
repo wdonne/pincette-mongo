@@ -32,8 +32,8 @@ class Relational {
 
     return (json, vars) ->
         applyImplementationsNum(implementations, json, vars, 2)
-            .filter(values -> comparable(values.get(0), values.get(1)))
-            .filter(values -> result.test(Cmp.compare(values.get(0), values.get(1))))
+            .filter(values -> comparable(values.getFirst(), values.get(1)))
+            .filter(values -> result.test(Cmp.compare(values.getFirst(), values.get(1))))
             .isPresent();
   }
 
@@ -42,7 +42,7 @@ class Relational {
 
     return (json, vars) ->
         applyImplementationsNum(implementations, json, vars, 2)
-            .filter(values -> values.get(0).equals(values.get(1)))
+            .filter(values -> values.getFirst().equals(values.get(1)))
             .isPresent();
   }
 

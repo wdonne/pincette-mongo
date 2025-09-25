@@ -73,10 +73,10 @@ class Arrays {
         applyImplementationsNum(implementations, json, vars, 2)
             .filter(
                 values ->
-                    JsonUtil.isArray(values.get(0))
+                    JsonUtil.isArray(values.getFirst())
                         && isInt(values.get(1))
-                        && withinRange(asArray(values.get(0)), asInt(values.get(1))))
-            .map(values -> arrayElemAt(asArray(values.get(0)), asInt(values.get(1))))
+                        && withinRange(asArray(values.getFirst()), asInt(values.get(1))))
+            .map(values -> arrayElemAt(asArray(values.getFirst()), asInt(values.get(1))))
             .orElse(NULL);
   }
 
@@ -195,7 +195,7 @@ class Arrays {
     return (json, vars) ->
         applyImplementationsNum(implementations, json, vars, 2)
             .filter(values -> JsonUtil.isArray(values.get(1)))
-            .map(values -> values.get(1).asJsonArray().contains(values.get(0)))
+            .map(values -> values.get(1).asJsonArray().contains(values.getFirst()))
             .map(JsonUtil::createValue)
             .orElse(NULL);
   }
@@ -208,13 +208,13 @@ class Arrays {
                 implementations, json, vars, fncs -> fncs.size() >= 2 && fncs.size() <= 4)
             .filter(
                 values ->
-                    JsonUtil.isArray(values.get(0))
+                    JsonUtil.isArray(values.getFirst())
                         && (values.size() < 3 || isNumber(values.get(2)))
                         && (values.size() < 4 || isNumber(values.get(3))))
             .map(
                 values ->
                     indexOfArray(
-                        values.get(0).asJsonArray(),
+                        values.getFirst().asJsonArray(),
                         values.get(1),
                         values.size() < 3 ? 0 : asInt(values.get(2)),
                         values.size() < 4 ? (values.size() - 1) : asInt(values.get(3))))
@@ -258,7 +258,7 @@ class Arrays {
     return Optional.of(value)
         .filter(JsonUtil::isArray)
         .map(JsonValue::asJsonArray)
-        .filter(a -> a.size() == 2 && isString(a.get(0)))
+        .filter(a -> a.size() == 2 && isString(a.getFirst()))
         .isPresent();
   }
 
@@ -333,7 +333,7 @@ class Arrays {
                 implementations, json, vars, fncs -> fncs.size() == 2 || fncs.size() == 3)
             .filter(
                 values ->
-                    isInt(values.get(0))
+                    isInt(values.getFirst())
                         && isInt(values.get(1))
                         && (values.size() < 3 || isInt(values.get(2))))
             .map(Arrays::range)
@@ -413,16 +413,16 @@ class Arrays {
                 implementations, json, vars, fncs -> fncs.size() == 2 || fncs.size() == 3)
             .filter(
                 values ->
-                    JsonUtil.isArray(values.get(0))
+                    JsonUtil.isArray(values.getFirst())
                         && isInt(values.get(1))
                         && (values.size() < 3
                             || (isInt(values.get(2)) && asInt(values.get(2)) >= 0)))
             .map(
                 values ->
                     slice(
-                        values.get(0).asJsonArray(),
+                        values.getFirst().asJsonArray(),
                         slicePosition(values),
-                        Math.abs(asInt(values.get(values.size() - 1)))))
+                        Math.abs(asInt(values.getLast()))))
             .orElse(NULL);
   }
 
@@ -434,14 +434,14 @@ class Arrays {
   }
 
   private static int slicePosition(final List<JsonValue> values) {
-    final int n = asInt(values.get(values.size() - 1));
+    final int n = asInt(values.getLast());
     final IntSupplier defaultPosition =
-        () -> n >= 0 ? 0 : max(0, asArray(values.get(0)).size() + n);
+        () -> n >= 0 ? 0 : max(0, asArray(values.getFirst()).size() + n);
     final IntSupplier setPosition =
         () ->
             Optional.of(asInt(values.get(1)))
                 .filter(p -> p >= 0)
-                .orElseGet(() -> max(0, asArray(values.get(0)).size() + asInt(values.get(1))));
+                .orElseGet(() -> max(0, asArray(values.getFirst()).size() + asInt(values.get(1))));
 
     return values.size() == 2 ? defaultPosition.getAsInt() : setPosition.getAsInt();
   }

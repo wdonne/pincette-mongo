@@ -30,7 +30,7 @@ class Booleans {
     return (json, vars) ->
         applyImplementations(implementations, json, vars)
             .map(values -> values.stream().reduce(initial, combiner, (r1, r2) -> r1))
-            .map(result -> Boolean.TRUE.equals(result) ? TRUE : FALSE)
+            .map(result -> result ? TRUE : FALSE)
             .orElse(NULL);
   }
 
@@ -47,7 +47,7 @@ class Booleans {
 
     return (json, vars) ->
         applyImplementationsNum(implementations, json, vars, 1)
-            .map(values -> values.get(0))
+            .map(List::getFirst)
             .map(Booleans::invert)
             .orElse(NULL);
   }

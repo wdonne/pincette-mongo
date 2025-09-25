@@ -312,7 +312,7 @@ public class Match {
   private static Optional<JsonArray> getNestedArray(final JsonArray array) {
     return Optional.of(array)
         .filter(a -> a.size() == 1)
-        .map(a -> a.get(0))
+        .map(a -> a.getFirst())
         .filter(JsonUtil::isArray)
         .map(JsonValue::asJsonArray);
   }
@@ -510,8 +510,8 @@ public class Match {
         .filter(JsonUtil::isArray)
         .map(JsonValue::asJsonArray)
         .filter(array -> array.size() == 2)
-        .filter(array -> isLong(array.get(0)) && isLong(array.get(1)))
-        .map(array -> pair(asLong(array.get(0)), asLong(array.get(1))))
+        .filter(array -> isLong(array.getFirst()) && isLong(array.get(1)))
+        .map(array -> pair(asLong(array.getFirst()), asLong(array.get(1))))
         .map(mod)
         .orElseGet(Match::falsePredicate);
   }

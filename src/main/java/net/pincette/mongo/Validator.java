@@ -300,7 +300,7 @@ public class Validator {
   private static Optional<String> getRefInArray(final JsonValue value) {
     return arrayValue(value)
         .filter(a -> a.size() == 1)
-        .map(a -> a.get(0))
+        .map(List::getFirst)
         .flatMap(Validator::getRef);
   }
 
@@ -432,7 +432,7 @@ public class Validator {
   }
 
   private Condition conditionArray(final String field, final JsonArray array) {
-    final Condition conditions = conditionsObject(array.get(0).asJsonObject());
+    final Condition conditions = conditionsObject(array.getFirst().asJsonObject());
 
     return (json, path) ->
         getArray(json, toJsonPointer(field))

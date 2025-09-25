@@ -61,7 +61,7 @@ class Conditional {
     return (json, vars) ->
         applyImplementations(
                 implementations, json, vars, fncs -> fncs.stream().allMatch(Objects::nonNull))
-            .map(values -> values.get(isFalse(values.get(0)) ? 2 : 1))
+            .map(values -> values.get(isFalse(values.getFirst()) ? 2 : 1))
             .orElse(NULL);
   }
 
@@ -70,7 +70,7 @@ class Conditional {
 
     return (json, vars) ->
         applyImplementationsNum(implementations, json, vars, 2)
-            .map(values -> values.get(values.get(0).equals(NULL) ? 1 : 0))
+            .map(values -> values.get(values.getFirst().equals(NULL) ? 1 : 0))
             .orElse(NULL);
   }
 

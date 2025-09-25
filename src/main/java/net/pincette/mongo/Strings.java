@@ -114,7 +114,7 @@ class Strings {
                 implementations, json, vars, fncs -> fncs.size() >= 2 && fncs.size() <= 4)
             .filter(
                 values ->
-                    isString(values.get(0))
+                    isString(values.getFirst())
                         && isString(values.get(1))
                         && (values.size() < 3 || isPositive(values.get(2)))
                         && (values.size() < 4 || isPositive(values.get(3))))
@@ -156,10 +156,10 @@ class Strings {
 
     return (json, vars) ->
         applyImplementations(
-                implementations, json, vars, fncs -> fncs.get(0) != null && fncs.get(1) != null)
+                implementations, json, vars, fncs -> fncs.getFirst() != null && fncs.get(1) != null)
             .filter(
                 values ->
-                    isString(values.get(0))
+                    isString(values.getFirst())
                         && isString(values.get(1))
                         && (values.get(2) == null || isString(values.get(2))))
             .map(
@@ -197,10 +197,12 @@ class Strings {
                 implementations,
                 json,
                 vars,
-                fncs -> fncs.get(0) != null && fncs.get(1) != null && fncs.get(2) != null)
+                fncs -> fncs.getFirst() != null && fncs.get(1) != null && fncs.get(2) != null)
             .filter(
                 values ->
-                    isString(values.get(0)) && isString(values.get(1)) && isString(values.get(2)))
+                    isString(values.getFirst())
+                        && isString(values.get(1))
+                        && isString(values.get(2)))
             .map(
                 values ->
                     createValue(
@@ -284,7 +286,7 @@ class Strings {
 
     return (json, vars) ->
         applyImplementationsNum(implementations, json, vars, 2)
-            .filter(values -> isString(values.get(0)) && isString(values.get(1)))
+            .filter(values -> isString(values.getFirst()) && isString(values.get(1)))
             .map(values -> op.apply(getString(values, 0), getString(values, 1)))
             .orElse(NULL);
   }
@@ -296,12 +298,12 @@ class Strings {
         applyImplementationsNum(implementations, json, vars, 3)
             .filter(
                 values ->
-                    (NULL.equals(values.get(0)) || isString(values.get(0)))
+                    (NULL.equals(values.getFirst()) || isString(values.getFirst()))
                         && isNumber(values.get(1))
                         && isNumber(values.get(2)))
             .map(
                 values ->
-                    NULL.equals(values.get(0))
+                    NULL.equals(values.getFirst())
                         ? createValue("")
                         : substrCP(
                             getString(values, 0), getInteger(values, 1), getInteger(values, 2)))
@@ -332,10 +334,11 @@ class Strings {
     implementations.add(memberFunction(value, CHARS, features));
 
     return (json, vars) ->
-        applyImplementations(implementations, json, vars, fncs -> fncs.get(0) != null)
+        applyImplementations(implementations, json, vars, fncs -> fncs.getFirst() != null)
             .filter(
                 values ->
-                    isString(values.get(0)) && (values.get(1) == null || isString(values.get(1))))
+                    isString(values.getFirst())
+                        && (values.get(1) == null || isString(values.get(1))))
             .map(
                 values ->
                     createValue(

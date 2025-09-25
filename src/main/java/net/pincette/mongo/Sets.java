@@ -62,7 +62,7 @@ class Sets {
     return createValue(
         values.isEmpty()
             || slide(values.stream().map(HashSet::new), 2)
-                .map(pair -> pair.get(0).equals(pair.get(1)))
+                .map(pair -> pair.getFirst().equals(pair.get(1)))
                 .reduce((r1, r2) -> r1 && r2)
                 .orElse(false));
   }

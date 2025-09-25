@@ -84,7 +84,7 @@ class Arithmetic {
   private static boolean isAddArray(final List<JsonValue> array) {
     final List<JsonValue> values = array.stream().filter(v -> !isNumber(v)).toList();
 
-    return values.isEmpty() || (values.size() == 1 && isInstant(values.get(0)));
+    return values.isEmpty() || (values.size() == 1 && isInstant(values.getFirst()));
   }
 
   static Implementation ln(final JsonValue value, final Features features) {
@@ -153,7 +153,7 @@ class Arithmetic {
 
     return (json, vars) ->
         applyImplementationsNum(implementations, json, vars, 2)
-            .map(values -> subtract(values.get(0), values.get(1)))
+            .map(values -> subtract(values.getFirst(), values.get(1)))
             .orElse(NULL);
   }
 

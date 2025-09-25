@@ -572,7 +572,7 @@ public class Collection {
   }
 
   private static <T> Optional<T> justOne(final List<T> list) {
-    return Optional.of(list).filter(l -> l.size() == 1).map(l -> l.get(0));
+    return Optional.of(list).filter(l -> l.size() == 1).map(List::getFirst);
   }
 
   public static <D> CompletionStage<UpdateResult> replaceOne(
