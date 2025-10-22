@@ -7,7 +7,7 @@
   <groupId>net.pincette</groupId>
   <artifactId>pincette-mongo</artifactId>
   <packaging>jar</packaging>
-  <version>4.3.1</version>
+  <version>4.3.2</version>
   <name>pincette-mongo</name>
   <description>MongoDB Utilities</description>
   <url>https://github.com/wdonne/pincette-mongo</url>
@@ -52,12 +52,12 @@
     <dependency>
       <groupId>org.mongodb</groupId>
       <artifactId>bson</artifactId>
-      <version>5.6.0</version>
+      <version>5.6.1</version>
     </dependency>
     <dependency>
       <groupId>org.mongodb</groupId>
       <artifactId>mongodb-driver-reactivestreams</artifactId>
-      <version>5.6.0</version>
+      <version>5.6.1</version>
     </dependency>
     <dependency>
       <groupId>javax.json</groupId>
@@ -67,7 +67,7 @@
     <dependency>
       <groupId>net.pincette</groupId>
       <artifactId>pincette-rs</artifactId>
-      <version>3.11.0</version>
+      <version>3.11.2</version>
     </dependency>
     <dependency>
       <groupId>net.pincette</groupId>
@@ -87,7 +87,7 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
-      <version>5.13.4</version>
+      <version>5.14.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -133,7 +133,7 @@
             </additionalJOption>
           </additionalJOptions>
           <links>
-            <link>https://docs.oracle.com/en/java/javase/17/docs/api/</link>
+            <link>https://docs.oracle.com/en/java/javase/21/docs/api/</link>
             <link>https://www.javadoc.io/doc/net.pincette/pincette-common/latest/</link>
             <link>https://www.javadoc.io/doc/net.pincette/pincette-rs/latest/</link>
             <link>https://www.javadoc.io/doc/net.pincette/pincette-json/latest/</link>
