@@ -3,6 +3,7 @@ package net.pincette.mongo;
 import static java.time.Instant.ofEpochMilli;
 import static java.time.Instant.ofEpochSecond;
 import static java.time.Instant.parse;
+import static java.util.regex.Pattern.compile;
 import static java.util.stream.Collectors.toMap;
 import static javax.json.JsonValue.FALSE;
 import static javax.json.JsonValue.NULL;
@@ -19,6 +20,8 @@ import static net.pincette.util.Util.tryToGetSilent;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.json.JsonArray;
 import javax.json.JsonArrayBuilder;
 import javax.json.JsonNumber;
@@ -56,6 +59,7 @@ import org.bson.types.ObjectId;
  */
 public class BsonUtil {
   private static final String ID = "_id";
+  private static final Pattern ISO_DATE = compile("ISODate\\(\"(.*)\"\\)");
 
   private BsonUtil() {}
 
@@ -139,7 +143,10 @@ public class BsonUtil {
       case NULL -> BsonNull.VALUE;
       case NUMBER -> fromJson(asNumber(json));
       case OBJECT -> fromJson(json.asJsonObject(), asTimestamp);
-      case STRING -> asTimestamp ? fromJsonNew(asString(json)) : fromJson(asString(json));
+      case STRING ->
+          asTimestamp
+              ? fromJsonNew(asString(json))
+              : isoDate(json).orElseGet(() -> fromJson(asString(json)));
       case TRUE -> BsonBoolean.TRUE;
     };
   }
@@ -191,10 +198,7 @@ public class BsonUtil {
 
   public static BsonValue fromJsonNew(final JsonString json) {
     return Optional.of(json.getString())
-        .flatMap(s -> tryToGetSilent(() -> parse(s)))
-        .map(Instant::toEpochMilli)
-        .map(BsonDateTime::new)
-        .map(BsonValue.class::cast)
+        .flatMap(BsonUtil::isoDate)
         .orElseGet(() -> new BsonString(json.getString()));
   }
 
@@ -219,6 +223,29 @@ public class BsonUtil {
   private static boolean isObjectId(final String key, final JsonValue value) {
     return key.equals(ID)
         && stringValue(value).filter(s -> s.length() == 24).filter(BsonUtil::isHex).isPresent();
+  }
+
+  public static BsonDateTime isoDate(final Instant instant) {
+    return new BsonDateTime(instant.toEpochMilli());
+  }
+
+  private static Optional<BsonValue> isoDate(final JsonValue value) {
+    return stringValue(value)
+        .map(ISO_DATE::matcher)
+        .filter(Matcher::matches)
+        .map(m -> m.group(1))
+        .flatMap(BsonUtil::isoDate);
+  }
+
+  private static Optional<BsonValue> isoDate(final String s) {
+    return tryToGetSilent(() -> parse(s))
+        .map(Instant::toEpochMilli)
+        .map(BsonDateTime::new)
+        .map(BsonValue.class::cast);
+  }
+
+  public static JsonValue isoDateJson(final Instant instant) {
+    return createValue("ISODate(\"" + instant + "\")");
   }
 
   public static BsonDocument toBsonDocument(final Bson bson) {
