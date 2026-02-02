@@ -203,7 +203,7 @@ public class BsonUtil {
   }
 
   private static BsonValue fromJsonObjectId(final JsonValue json) {
-    return new BsonObjectId(new ObjectId(string(json)));
+    return new BsonObjectId(new ObjectId(stringValue(json).orElse("")));
   }
 
   private static boolean isHex(final String s) {
