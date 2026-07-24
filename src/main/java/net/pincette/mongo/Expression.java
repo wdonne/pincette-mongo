@@ -1,6 +1,7 @@
 package net.pincette.mongo;
 
 import static java.time.Instant.now;
+import static java.time.ZoneId.systemDefault;
 import static java.util.Collections.emptyMap;
 import static java.util.Optional.ofNullable;
 import static java.util.logging.Level.FINEST;
@@ -1095,7 +1096,10 @@ public class Expression {
     return tryWith(() -> value.equals(NOW) ? createValue(now().toString()) : null)
         .or(
             (Supplier<JsonValue>)
-                () -> value.equals(TODAY) ? createValue(LocalDate.now().toString()) : null)
+                () ->
+                    value.equals(TODAY)
+                        ? createValue(LocalDate.now(systemDefault()).toString())
+                        : null)
         .or((Supplier<JsonValue>) () -> value.equals(ROOT) ? json : null)
         .or(
             (Supplier<JsonValue>)
