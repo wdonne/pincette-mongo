@@ -160,9 +160,10 @@ class Arithmetic {
   private static JsonValue subtract(final JsonValue v1, final JsonValue v2) {
     final Supplier<JsonValue> tryDates =
         () ->
-            isInstant(v2)
-                ? createValue(between(asInstant(v2), asInstant(v1)).toMillis())
-                : createValue(asInstant(v1).minusMillis(asLong(v2)).toString());
+            createValue(
+                isInstant(v2)
+                    ? between(asInstant(v2), asInstant(v1)).toMillis()
+                    : asInstant(v1).minusMillis(asLong(v2)).toString());
 
     return isNumber(v1) && isNumber(v2)
         ? createValue(asNumber(v1).bigDecimalValue().subtract(asNumber(v2).bigDecimalValue()))

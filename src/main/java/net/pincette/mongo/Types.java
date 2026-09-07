@@ -79,7 +79,7 @@ class Types {
 
   private static JsonValue convertToBoolean(final JsonValue value) {
     return switch (value.getValueType()) {
-      case NUMBER -> asNumber(value).bigDecimalValue().equals(ZERO) ? FALSE : TRUE;
+      case NUMBER -> asNumber(value).bigDecimalValue().compareTo(ZERO) == 0 ? FALSE : TRUE;
       case STRING -> TRUE;
       default -> value;
     };
@@ -90,9 +90,10 @@ class Types {
       case FALSE -> createValue(0);
       case NULL, NUMBER -> createValue(asNumber(value).bigDecimalValue());
       case STRING ->
-          isInstant(value)
-              ? createValue(new BigDecimal(asInstant(value).toEpochMilli()))
-              : createValue(new BigDecimal(asString(value).getString()));
+          createValue(
+              isInstant(value)
+                  ? new BigDecimal(asInstant(value).toEpochMilli())
+                  : new BigDecimal(asString(value).getString()));
       case TRUE -> createValue(1);
       default -> throw new UnsupportedOperationException(value.toString() + " toDecimal");
     };
